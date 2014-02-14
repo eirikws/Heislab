@@ -1,0 +1,22 @@
+package main
+
+
+import(
+    //"fmt"
+    //"net"
+    ."runtime"
+    . "./../communication"
+
+)
+
+var BCAST_IP = GetBIP(MY_IP)
+const TARGET_PORT = "20011"
+const LISTEN_PORT = "30022"
+
+func main(){
+    GOMAXPROCS(NumCPU())
+    msg:=MakeMessage(BCAST_IP,"muhhahahaha","testtesttesttesttesttesttesttesttesttesttest")
+    go SendMsgTo(BCAST_IP,TARGET_PORT,msg)
+    go ListenerCon(BCAST_IP,LISTEN_PORT)
+}
+
