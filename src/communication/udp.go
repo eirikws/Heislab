@@ -12,16 +12,15 @@ func SendMsgTo(ipAdr string, port string,message Message){
         }
                 
         Bmessage:=msgToByte(message)
-        for i:=0;i<5;i++{
-                con.Write(Bmessage)
-        }
+        con.Write(Bmessage)
 }
-func ListenerCon(ipAdr string, port string){
+func ListenerCon(ipAdr string, port string,MY_IP string){
     serverAddr, err := net.ResolveUDPAddr("udp",ipAdr+":"+port)
     psock, err := net.ListenUDP("udp4", serverAddr)
     if err != nil { return }
     buf := make([]byte,1024)
-    for {                 
+    for {
+        fmt.Println("listner")                 
         if err != nil { return }
         _, remoteAddr, _ := psock.ReadFromUDP(buf)
         if remoteAddr.IP.String() != MY_IP {
