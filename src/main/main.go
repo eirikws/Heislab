@@ -2,21 +2,23 @@ package main
 
 
 import(
-    //"fmt"
+//    "fmt"
     //"net"
     ."runtime"
-    . "./../communication"
+    com "./../communication"
+    elev "./../elevator"
 
 )
 
-BCAST_IP := GetBIP(MY_IP)
-const TARGET_PORT = "20011"
-const LISTEN_PORT = "30022"
+const PORT="30001"
 
 func main(){
+    MY_IP:=com.GetMyIP()
+    BCAST_IP := com.GetBIP(MY_IP)
     GOMAXPROCS(NumCPU())
-    msg:=MakeMessage(BCAST_IP,"muhhahahaha","testtesttesttesttesttesttesttesttesttesttest")
-    go SendMsgTo(BCAST_IP,TARGET_PORT,msg)
-    go ListenerCon(BCAST_IP,LISTEN_PORT)
+    msg:=com.MakeMessage(BCAST_IP,"muhhahahaha","testtesttesttesttesttesttesttesttesttesttest")
+    go com.ListenerCon(BCAST_IP,PORT,MY_IP)
+    go com.SendMsgTo(BCAST_IP,PORT,msg)
+    for{
+    }
 }
-
