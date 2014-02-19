@@ -1,5 +1,5 @@
-// Channel definitions for elevator control using LibComedi
-package elevator// where "driver" is the folder that contains io.go, io.c, io.h, channels.go, channels.c and 
+
+package elevator
 
 const (
 
@@ -55,6 +55,4 @@ FLOOR_DOWN1=-1
 FLOOR_UP4=-1
 LIGHT_DOWN1=-1
 LIGHT_UP4=-1
-
-
 )

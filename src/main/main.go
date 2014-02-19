@@ -2,23 +2,26 @@ package main
 
 
 import(
-//    "fmt"
+    "fmt"
     //"net"
     ."runtime"
-    com "./../communication"
+ //   com "./../communication"
     elev "./../elevator"
+    "time"
 
 )
 
 const PORT="30001"
 
 func main(){
-    MY_IP:=com.GetMyIP()
-    BCAST_IP := com.GetBIP(MY_IP)
+    direction :=make(chan elev.CALL_DIRECTION)
     GOMAXPROCS(NumCPU())
-    msg:=com.MakeMessage(BCAST_IP,"muhhahahaha","testtesttesttesttesttesttesttesttesttesttest")
-    go com.ListenerCon(BCAST_IP,PORT,MY_IP)
-    go com.SendMsgTo(BCAST_IP,PORT,msg)
+    elev.Elev_init()
+    go elev.Elev_set_speed(direction)
+    direction<-elev.CALL_UP
+    time.Sleep(time.Millisecond * 2000)
+    direction<-elev.CALL_COMMAND
     for{
+        fmt.Println("stop")
     }
 }
