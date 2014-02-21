@@ -5,7 +5,7 @@ import(
     "strings"
 )
 
-func GetMyIP() string{
+func getMyIP() string{
     allIPs,err:=net.InterfaceAddrs()
     if err!=nil{
         fmt.Println("IP receiving errors!!!!!!!!\n")
@@ -14,7 +14,7 @@ func GetMyIP() string{
     return strings.Split(allIPs[1].String(),"/")[0]
 }
 
-func GetBIP(MyIP string) string{
+func getBIP(MyIP string) string{
     IP:=strings.Split(MyIP,".")
     return IP[0]+"."+IP[1]+"."+IP[2]+".255"
 }

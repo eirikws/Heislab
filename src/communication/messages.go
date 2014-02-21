@@ -17,6 +17,6 @@ func byteToMsg(p []byte) Message{
     return Message{msg[0],msg[1],msg[2]}
 }
 
-func MakeMessage(IpAdrFrom string,IpAdrTo string,info string) Message{
+func makeMessage(IpAdrFrom string,IpAdrTo string,info string) Message{
     return Message{IpAdrFrom,IpAdrTo,info}
 }

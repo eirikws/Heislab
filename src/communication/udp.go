@@ -4,28 +4,30 @@ import (
         "net"
         "fmt"
 )
-func SendMsgTo(ipAdr string, port string,message Message){
+func getUDPcon(ipAdr string, port string) *net.UDPConn{
         serverAddr, err := net.ResolveUDPAddr("udp",ipAdr+":"+port)
         con, err := net.DialUDP("udp", nil, serverAddr)
         if err != nil {
                 fmt.Println("fail")
         }
-                
-        Bmessage:=msgToByte(message)
-        con.Write(Bmessage)
+        return con     
+//        Bmessage:=msgToByte(message)
+//        con.Write(Bmessage)
 }
-func ListenerCon(ipAdr string, port string,MY_IP string){
+
+func listenerCon(ipAdr string, port string,MY_IP string,ch chan Message){
     serverAddr, err := net.ResolveUDPAddr("udp",ipAdr+":"+port)
     psock, err := net.ListenUDP("udp4", serverAddr)
     if err != nil { return }
     buf := make([]byte,1024)
-    for {
-        fmt.Println("listner")                 
+    var msg Message
+    for { 
         if err != nil { return }
         _, remoteAddr, _ := psock.ReadFromUDP(buf)
+        msg=byteToMsg(buf)
         if remoteAddr.IP.String() != MY_IP {
-            fmt.Printf("%s\n",buf)
+            ch<-msg
             }
-        fmt.Printf("%s\n",buf)
+        ch<-msg
     }              
 }
