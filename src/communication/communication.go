@@ -8,7 +8,7 @@ import (
 const ImAlivePort="30100"
 const comPORT="30101"
 
-func Communication(sendChan chan string,getChan chan string){
+func Communication(sendChan chan string, getChan chan string){
     ch:=make(chan []string)
     master:=make(chan string)
     MyIP:=getMyIP()
@@ -16,7 +16,7 @@ func Communication(sendChan chan string,getChan chan string){
     go sendImAlive(MyIP,BIP)
     go imAliveListener(MyIP,BIP,ch)
     go sendMsg(master,sendChan,MyIP)
-    go recieveMsg(getChan,master,MyIP)
+    go recieveMsg(master,getChan,MyIP)
     var AliveList []string
     for{
         AliveList=<-ch
@@ -25,7 +25,7 @@ func Communication(sendChan chan string,getChan chan string){
     }
 }
 
-func sendImAlive(MyIP,BIP string){
+func sendImAlive(MyIP, BIP string){
     msg:=makeMessage(MyIP,"ALL","I'm Alive")
     con:=getUDPcon(BIP,ImAlivePort)
     bmsg:=msgToByte(msg)
@@ -35,9 +35,9 @@ func sendImAlive(MyIP,BIP string){
     }
 }
 
-func imAliveListener(MyIP,BIP string,ch chan []string){
+func imAliveListener(MyIP, BIP string, ch chan []string){
     alivechan:=make(chan Message)
-    go listenerCon(BIP,ImAlivePort,MyIP,alivechan)
+    go listenerCon(BIP,ImAlivePort, MyIP, alivechan)
     var newMsg Message
     var IPadr string
     var IPlist=[]string{MyIP}
@@ -58,18 +58,20 @@ func imAliveListener(MyIP,BIP string,ch chan []string){
 }
 
 func sendMsg(master,sendChan chan string,MyIP string){
-   var mst,msg string
-   mst=<-master
-   for{
-        msg=<-sendChan
-        con:=getUDPcon(mst,comPORT)
-        Smsg:=makeMessage(MyIP,mst,msg)
-        Bmsg:=msgToByte(Smsg)
-        con.Write(Bmsg)
+    var mst,msg string   
+    for{
+        select{
+        case mst=<-master:
+        case msg=<-sendChan:
+            con:=getUDPcon(mst,comPORT)
+            Smsg:=makeMessage(MyIP,mst,msg)
+            Bmsg:=msgToByte(Smsg)
+            con.Write(Bmsg)
+        }
    }
 }
 
-func recieveMsg(getChan,master chan string,MyIP string){
+func recieveMsg(master,getChan chan string,MyIP string){
     var mst string
     var Msg Message
     msg:=make(chan Message)
@@ -77,7 +79,7 @@ func recieveMsg(getChan,master chan string,MyIP string){
     go listenerCon(mst,comPORT,MyIP,msg)
     for{
         Msg=<-msg
-        fmt.Println("Recievd Message")
+        fmt.Println("Received Message")
         getChan<-Msg.from+Msg.to+Msg.info
     }
 }
