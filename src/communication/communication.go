@@ -20,6 +20,7 @@ func Communication(sendChan chan string, getChan chan string){
     var AliveList []string
     for{
         AliveList=<-ch
+        IPsort(AliveList)
         master<-AliveList[0]
         
     }
