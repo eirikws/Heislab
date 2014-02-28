@@ -5,11 +5,18 @@ import (
     "fmt"
 )
 
+type IPandTimeStamp struct{
+   IPadr string
+   Timestamp time.Time
+}
+
 const ImAlivePort="30100"
 const comPORT="30101"
 
 func Communication(sendChan chan string, getChan chan string){
-    ch:=make(chan []string)
+    ch:=make(chan []IPandTimeStamp)
+    
+    var AliveList []IPandTimeStamp
     master:=make(chan string)
     MyIP:=getMyIP()
     BIP:=getBIP(MyIP)
@@ -17,12 +24,15 @@ func Communication(sendChan chan string, getChan chan string){
     go imAliveListener(MyIP,BIP,ch)
     go sendMsg(master,sendChan,MyIP)
     go recieveMsg(master,getChan,MyIP)
-    var AliveList []string
+    go timeStampCheck(ch)
     for{
-        AliveList=<-ch
-        IPsort(AliveList)
-        master<-AliveList[0]
-        
+        select {
+        case AliveList=<-ch:
+            IPsort(AliveList)
+//            fmt.Println(AliveList)
+            master<-AliveList[0].IPadr
+        case <-time.After(time.Second*2):
+        }
     }
 }
 
@@ -36,25 +46,31 @@ func sendImAlive(MyIP, BIP string){
     }
 }
 
-func imAliveListener(MyIP, BIP string, ch chan []string){
+func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
     alivechan:=make(chan Message)
     go listenerCon(BIP,ImAlivePort, MyIP, alivechan)
     var newMsg Message
     var IPadr string
-    var IPlist=[]string{MyIP}
+    var IPlist=[]IPandTimeStamp{{"129.241.187.150",time.Now()},{MyIP,time.Now()}}
+    var iptime IPandTimeStamp
     x:=0
     for{
+        fmt.Println(1)
+        IPlist=<-ch
+        fmt.Println(3)
         newMsg=<-alivechan
+        fmt.Println(2)
         IPadr=newMsg.from
-        for _,IP:=range IPlist{
-            if IP==IPadr{
+        for i,IP:=range IPlist{
+            if IP.IPadr==IPadr{
                 x=1
+                IPlist[i].Timestamp=time.Now().Add(2200*time.Millisecond)}
             }
-            if x==0{
-                IPlist=append(IPlist,IPadr)
-            }
-            ch<-IPlist
+        if x==0{
+            iptime=IPandTimeStamp{IPadr,time.Now().Add(2200*time.Millisecond)}
+            IPlist=append(IPlist,iptime)
         }
+        ch<-IPlist
     }
 }
 
@@ -69,7 +85,7 @@ func sendMsg(master,sendChan chan string,MyIP string){
             Bmsg:=msgToByte(Smsg)
             con.Write(Bmsg)
         }
-   }
+    }
 }
 
 func recieveMsg(master,getChan chan string,MyIP string){
