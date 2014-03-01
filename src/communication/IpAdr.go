@@ -23,7 +23,6 @@ func getBIP(MyIP string) string{
 }
 
 func IPsort(list []IPandTimeStamp) []IPandTimeStamp{ 
-    fmt.Println("enter ipsort")
     ipbase:=strings.Split(list[0].IPadr,".")[0:3]
     var intlist []int
     var newlist []IPandTimeStamp
@@ -38,11 +37,12 @@ func IPsort(list []IPandTimeStamp) []IPandTimeStamp{
         newlist=append(newlist,iptime)
     }
     i:=0
-    for i<len(list)-1{
+    for i<len(list){
         for j:=0; j<len(list); j++{
             if newlist[i].IPadr==list[j].IPadr{
                 newlist[i].Timestamp=list[j].Timestamp
                 i++
+                break
             }
         }
     }
@@ -52,23 +52,30 @@ func IPsort(list []IPandTimeStamp) []IPandTimeStamp{
 func timeStampCheck(list chan []IPandTimeStamp){
     var IPlist []IPandTimeStamp
     var newlist []IPandTimeStamp
-    IPlist=<-list
-    
-    for _,val:= range(IPlist){
-        if val.Timestamp.Before(time.Now()){
-            fmt.Println("delete")
-            for _,bval:=range(IPlist){
-                if val.IPadr!=bval.IPadr{
-                    newlist=append(newlist,bval)
-                
-                }   
+    var didWeDelete int
+    for{
+        newlist=nil
+        didWeDelete=0
+        IPlist=<-list
+        for _,val:= range(IPlist){
+            if val.Timestamp.Before(time.Now()){
+                didWeDelete=1
+                for _,bval:=range(IPlist){
+                    if val.IPadr!=bval.IPadr{
+                        newlist=append(newlist,bval)
+                    } 
+                }
+                list<-newlist
+                break
+                  
             }
-               
         }
+        if didWeDelete==0{
+
+           list<-IPlist
+        }
+        time.Sleep(time.Millisecond*100)
     }
-    fmt.Println(newlist)
-    list<-newlist
-    // time.Sleep(time.Millisecond*100)
 }
 
 

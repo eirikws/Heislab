@@ -28,9 +28,12 @@ func Communication(sendChan chan string, getChan chan string){
     for{
         select {
         case AliveList=<-ch:
-            IPsort(AliveList)
-//            fmt.Println(AliveList)
+            //fmt.Println("read CH")
+            AliveList=IPsort(AliveList)
+            fmt.Println(AliveList)
             master<-AliveList[0].IPadr
+            ch<-AliveList
+         //   fmt.Println("wrote CH")
         case <-time.After(time.Second*2):
         }
     }
@@ -51,26 +54,29 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
     go listenerCon(BIP,ImAlivePort, MyIP, alivechan)
     var newMsg Message
     var IPadr string
-    var IPlist=[]IPandTimeStamp{{"129.241.187.150",time.Now()},{MyIP,time.Now()}}
+    var IPlist=[]IPandTimeStamp{{MyIP,time.Now()}}
     var iptime IPandTimeStamp
     x:=0
     for{
-        fmt.Println(1)
-        IPlist=<-ch
-        fmt.Println(3)
+        x=0
         newMsg=<-alivechan
-        fmt.Println(2)
         IPadr=newMsg.from
         for i,IP:=range IPlist{
             if IP.IPadr==IPadr{
+            
                 x=1
                 IPlist[i].Timestamp=time.Now().Add(2200*time.Millisecond)}
             }
         if x==0{
+            fmt.Println("Appending")
             iptime=IPandTimeStamp{IPadr,time.Now().Add(2200*time.Millisecond)}
             IPlist=append(IPlist,iptime)
         }
         ch<-IPlist
+       // fmt.Println("I'm alive: wrote to ch")
+        IPlist=<-ch
+       // fmt.Println("I'm Alive: Read from ch")
+       // fmt.Println("I'm Alive IPlist :", IPlist)
     }
 }
 
