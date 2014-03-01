@@ -2,6 +2,7 @@ package elevator
 
 import "fmt"
 import "time"
+import "strconv"
 
 const N_BUTTONS int=3
 const N_FLOORS int=4
@@ -44,53 +45,80 @@ type ElevButtons struct{
     door_open bool
 }
 
+func MakeInfoStr(sendMsg chan string,buttons chan ElevButtons){
+	var button ElevButtons
+	var str string
+	for{
+		
+		button=<-buttons
+		str="ub:"+strconv.FormatBool(button.u_buttons[0])+"."+strconv.FormatBool(button.u_buttons[1])+"."+strconv.FormatBool(button.u_buttons[2])+";db:"+strconv.FormatBool(button.d_buttons[0])+"."+strconv.FormatBool(button.d_buttons[1])+"."+strconv.FormatBool(button.d_buttons[2])+";cb:"+strconv.FormatBool(button.c_buttons[0])+"."+strconv.FormatBool(button.c_buttons[1])+"."+strconv.FormatBool(button.c_buttons[2])+"."+strconv.FormatBool(button.c_buttons[3])+";sb:"+strconv.FormatBool(button.stop_button)+";cf:"+strconv.Itoa(button.current_floor)+";obs:"+strconv.FormatBool(button.obstruction)+";do:"+strconv.FormatBool(button.door_open)
+		buttons<-button
+		sendMsg<-str
+		fmt.Println("making str")
+	}
+}
+
+/*
 func ButtonsAndLights(buttons chan ElevButtons){
-   var butt ElevButtons
-   for{
-       butt=<-buttons
-       check_buttons(&butt)
-       set_lights(&butt,butt.current_floor)
-       buttons<-butt
-       
+	var butt ElevButtons
+	for{
+		
+		fmt.Println("in butsAndLightsYYEYEYE")
+		fmt.Println("read buttons")
+		if check_buttons(&butt){
+			fmt.Println("wrote to buttons")
+			buttons<-butt
+			fmt.Println("muhhaha")
+		}
+		set_lights(&butt,butt.current_floor)
+		
     }
 }
-
-func check_buttons(elbut *ElevButtons){
-	for i:=0; i<N_FLOORS-1; i++ {
-		if elev_get_button_signal(CALL_UP, i){
-			elbut.u_buttons[i]=true
+*/
+func Check_buttons(buttons chan ElevButtons) bool{
+	var elbut ElevButtons
+	for{
+		elbut=<-buttons
+		for i:=0; i<N_FLOORS-1; i++ {
+			if elev_get_button_signal(CALL_UP, i){
+				elbut.u_buttons[i]=true
+			}
+			if elev_get_button_signal(CALL_DOWN, i+1){
+				elbut.d_buttons[i]=true
+			}
+			if elev_get_button_signal(CALL_COMMAND, i){
+				elbut.c_buttons[i]=true
+			}
 		}
-		if elev_get_button_signal(CALL_DOWN, i+1){
-			elbut.d_buttons[i]=true
+		if elev_get_button_signal(CALL_COMMAND,3){
+			elbut.c_buttons[3]=true
 		}
-		if elev_get_button_signal(CALL_COMMAND, i){
-			elbut.c_buttons[i]=true
+		if elev_get_stop_signal(){
+			elbut.stop_button=true
 		}
+		i:=elev_get_floor_sensor_signal()
+		if i!=-1{
+		    elbut.current_floor=i
+		}
+		buttons<-elbut
 	}
-	if elev_get_button_signal(CALL_COMMAND,3){
-		elbut.c_buttons[3]=true
-	}
-	if elev_get_stop_signal(){
-		elbut.stop_button=true
-	}
-	i:=elev_get_floor_sensor_signal()
-	if i!=-1{
-	    elbut.current_floor=i
-	}
-	return
 }
 
-func set_lights(elbut *ElevButtons, floor int){
-    for i:=0; i<N_FLOORS-1; i++{
-		elev_set_button_lamp(CALL_COMMAND,i,elbut.c_buttons[i])
-		elev_set_button_lamp(CALL_UP,i,elbut.u_buttons[i])
-		elev_set_button_lamp(CALL_DOWN,i+1, elbut.d_buttons[i])
+func Set_lights(buttons chan ElevButtons){
+	var button ElevButtons
+	for{
+		button=<-buttons
+    	for i:=0; i<N_FLOORS-1; i++{
+			elev_set_button_lamp(CALL_COMMAND,i,button.c_buttons[i])
+			elev_set_button_lamp(CALL_UP,i,button.u_buttons[i])
+			elev_set_button_lamp(CALL_DOWN,i+1, button.d_buttons[i])
+		}
+		elev_set_button_lamp(CALL_COMMAND,3,button.c_buttons[3])
+		elev_set_stop_lamp(button.stop_button)
+		//set the floor_indicators
+		elev_set_floor_indicator(button.current_floor)
+		buttons<-button
 	}
-	elev_set_button_lamp(CALL_COMMAND,3,elbut.c_buttons[3])
-	elev_set_stop_lamp(elbut.stop_button)
-	//set the floor_indicators
-	elev_set_floor_indicator(floor)
-	return;
 }
 
 
@@ -114,33 +142,26 @@ func Elev_init() bool{
     return true
 }
 
-
-func Elevator_init(drive chan CALL_DIRECTION,buttons chan ElevButtons){
-    drive<-CALL_UP
-    var butt ElevButtons
+func Init_buttons(buttons *ElevButtons){
     for i:=0;i<N_FLOORS-1;i++{
-        fmt.Println(i)
-        butt.u_buttons[i]=false
-        butt.d_buttons[i]=false
-        butt.c_buttons[i]=false
+        buttons.u_buttons[i]=false
+        buttons.d_buttons[i]=false
+        buttons.c_buttons[i]=false
     }
-    fmt.Println("222")
-    butt.c_buttons[3]=false
-    butt.stop_button=false
-    butt.door_open=false
-    butt.obstruction=false
+    buttons.c_buttons[3]=false
+    buttons.stop_button=false
+    buttons.door_open=false
+    buttons.obstruction=false
+	buttons.current_floor=-1
+}
+
+func Elevator_init(drive chan CALL_DIRECTION){
+    drive<-CALL_UP
+	
     for elev_get_floor_sensor_signal()==-1{
     
-        fmt.Println("mellom etasjer startup",elev_get_floor_sensor_signal())
     }
-    fmt.Println(elev_get_floor_sensor_signal())
     drive<-CALL_COMMAND
-    fmt.Println("333")
-    butt.current_floor=elev_get_floor_sensor_signal()
-    fmt.Println(butt)
-    buttons<-butt
-    fmt.Println("444")
-    fmt.Println("555")
 }
 
 func Elev_set_speed(myDir chan CALL_DIRECTION){
@@ -148,7 +169,6 @@ func Elev_set_speed(myDir chan CALL_DIRECTION){
     nowDir:=CALL_COMMAND
     for{
         nowDir=<-myDir
-        fmt.Println("read Mydir")
         switch nowDir{
             case CALL_UP:
             io_clear_bit(MOTORDIR)
@@ -173,26 +193,16 @@ func Elev_set_speed(myDir chan CALL_DIRECTION){
 }
 
 func elev_get_floor_sensor_signal() int{
-    fmt.Println("shekker flooor")
     switch{
         case io_read_bit(SENSOR1)!=0:
-        fmt.Println(io_read_bit(SENSOR1))
-        fmt.Println("0")
         return 0
         case io_read_bit(SENSOR2)!=0:
-        fmt.Println(io_read_bit(SENSOR2))
-        fmt.Println("1")
         return 1
         case io_read_bit(SENSOR3)!=0:
-        fmt.Println(io_read_bit(SENSOR3))
-        fmt.Println("2")
         return 2
         case io_read_bit(SENSOR4)!=0:
-        fmt.Println(io_read_bit(SENSOR4))
-        fmt.Println("3")
         return 3
         default:
-        fmt.Println("-1")
         return -1
     }
 }

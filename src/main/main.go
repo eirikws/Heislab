@@ -16,18 +16,23 @@ func main(){
     getMsg:=make(chan string)
     buttons:=make(chan elev.ElevButtons)
   //  var msg string
+	var button elev.ElevButtons
     go com.Communication(sendMsg,getMsg)
     direction :=make(chan elev.CALL_DIRECTION)
     GOMAXPROCS(NumCPU())
-    
+	
+
+
+
+    elev.Init_buttons(&button)
+
     elev.Elev_init()
     go elev.Elev_set_speed(direction)
-    fmt.Println("after elev_set_speed")
-    elev.Elevator_init(direction,buttons)
-    fmt.Println("after elevator_init")
-    go elev.ButtonsAndLights(buttons)
+    elev.Elevator_init(direction)
+	buttons<-button
     fmt.Println("after buttonsandlights")
-    for{
-
-    }
+	go elev.Set_lights(buttons)
+	go elev.Check_buttons(buttons)
+	go elev.MakeInfoStr(sendMsg,buttons)
+	fmt.Println("after infostr")
 }
