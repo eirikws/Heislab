@@ -18,16 +18,15 @@ func getUDPcon(ipAdr string, port string) *net.UDPConn{
 func listenerCon(ipAdr string, port string,MY_IP string,ch chan Message){
     serverAddr, err := net.ResolveUDPAddr("udp",ipAdr+":"+port)
     psock, err := net.ListenUDP("udp4", serverAddr)
+    fmt.Println(err)
     if err != nil { return }
     buf := make([]byte,1024)
     var msg Message
-    for { 
+    for {
         if err != nil { return }
-        _, remoteAddr, _ := psock.ReadFromUDP(buf)
+ //       fmt.Println("1")
+        psock.ReadFromUDP(buf)
         msg=byteToMsg(buf)
-        if remoteAddr.IP.String() != MY_IP {
-            ch<-msg
-            }
         ch<-msg
     }              
 }

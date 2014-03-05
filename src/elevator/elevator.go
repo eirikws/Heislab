@@ -45,16 +45,13 @@ type ElevButtons struct{
     door_open bool
 }
 
-func MakeInfoStr(sendMsg chan string,buttons chan ElevButtons){
+func MakeInfoStr(sendMsg chan string,msgbuttons chan ElevButtons){
 	var button ElevButtons
 	var str string
 	for{
-		
-		button=<-buttons
+		button=<-msgbuttons
 		str="ub:"+strconv.FormatBool(button.u_buttons[0])+"."+strconv.FormatBool(button.u_buttons[1])+"."+strconv.FormatBool(button.u_buttons[2])+";db:"+strconv.FormatBool(button.d_buttons[0])+"."+strconv.FormatBool(button.d_buttons[1])+"."+strconv.FormatBool(button.d_buttons[2])+";cb:"+strconv.FormatBool(button.c_buttons[0])+"."+strconv.FormatBool(button.c_buttons[1])+"."+strconv.FormatBool(button.c_buttons[2])+"."+strconv.FormatBool(button.c_buttons[3])+";sb:"+strconv.FormatBool(button.stop_button)+";cf:"+strconv.Itoa(button.current_floor)+";obs:"+strconv.FormatBool(button.obstruction)+";do:"+strconv.FormatBool(button.door_open)
-		buttons<-button
 		sendMsg<-str
-		fmt.Println("making str")
 	}
 }
 
@@ -75,30 +72,52 @@ func ButtonsAndLights(buttons chan ElevButtons){
     }
 }
 */
-func Check_buttons(buttons chan ElevButtons) bool{
+func Check_buttons(buttons chan ElevButtons,msgbuttons chan ElevButtons) bool{
 	var elbut ElevButtons
+	var x int
 	for{
+	   x=0
 		elbut=<-buttons
 		for i:=0; i<N_FLOORS-1; i++ {
 			if elev_get_button_signal(CALL_UP, i){
+			   if elbut.u_buttons[i]==false{
+			      x=1
+			   }
 				elbut.u_buttons[i]=true
 			}
 			if elev_get_button_signal(CALL_DOWN, i+1){
+			   if elbut.d_buttons[i]==false{
+			      x=1
+			   }
 				elbut.d_buttons[i]=true
 			}
 			if elev_get_button_signal(CALL_COMMAND, i){
+			   if elbut.c_buttons[i]==false{
+			      x=1
+			   }
 				elbut.c_buttons[i]=true
 			}
 		}
 		if elev_get_button_signal(CALL_COMMAND,3){
+		   if elbut.c_buttons[3]==false{
+			      x=1
+			   }
 			elbut.c_buttons[3]=true
 		}
+
 		if elev_get_stop_signal(){
+		   if elbut.stop_button==false{
+			      x=1
+			   }
 			elbut.stop_button=true
 		}
 		i:=elev_get_floor_sensor_signal()
-		if i!=-1{
+		if i!=-1 && i!=elev_get_floor_sensor_signal(){
+		    x=1
 		    elbut.current_floor=i
+		}
+		if x==1{
+		   msgbuttons<-elbut
 		}
 		buttons<-elbut
 	}
@@ -123,7 +142,6 @@ func Set_lights(buttons chan ElevButtons){
 
 
 func Elev_init() bool{
-    fmt.Println("start elev_init")
     if io_init()==0{
         return false
     }
@@ -138,7 +156,6 @@ func Elev_init() bool{
     }
     elev_set_stop_lamp(false)
     elev_set_door_open_lamp(false)
-    fmt.Println("exit elev_init")
     return true
 }
 
@@ -152,7 +169,7 @@ func Init_buttons(buttons *ElevButtons){
     buttons.stop_button=false
     buttons.door_open=false
     buttons.obstruction=false
-	buttons.current_floor=-1
+	 buttons.current_floor=-1
 }
 
 func Elevator_init(drive chan CALL_DIRECTION){
@@ -163,7 +180,6 @@ func Elevator_init(drive chan CALL_DIRECTION){
     }
     drive<-CALL_COMMAND
 }
-
 func Elev_set_speed(myDir chan CALL_DIRECTION){
     lastDir:=CALL_COMMAND
     nowDir:=CALL_COMMAND
@@ -171,23 +187,33 @@ func Elev_set_speed(myDir chan CALL_DIRECTION){
         nowDir=<-myDir
         switch nowDir{
             case CALL_UP:
+            fmt.Println("Goes UP!!")
             io_clear_bit(MOTORDIR)
             io_write_analog(MOTOR,DRIVE)
             case CALL_DOWN:
+            fmt.Println("Goes DOWN!!!")
             io_set_bit(MOTORDIR)
             io_write_analog(MOTOR,DRIVE)
             case CALL_COMMAND:
             if lastDir==CALL_UP{
+                fmt.Println("Stopping on the way up!!!")
                 io_set_bit(MOTORDIR)
+                fmt.Println("Stopping on the way up2!!!")
                 time.Sleep(SLEEPTIME)
+                fmt.Println("Stopping on the way up3!!!")
                 io_write_analog(MOTOR,STOPT)
+                fmt.Println("Stopping on the way up4!!!")
+                
             }
             if lastDir==CALL_DOWN{
+                fmt.Println("Stopping on the way down!!!")
                 io_clear_bit(MOTORDIR)
                 time.Sleep(SLEEPTIME)
                 io_write_analog(MOTOR,STOPT)
             }
+            
         }
+        fmt.Println("done Switching dir")
         lastDir=nowDir
     }
 }

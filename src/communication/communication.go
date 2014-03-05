@@ -10,8 +10,8 @@ type IPandTimeStamp struct{
    Timestamp time.Time
 }
 
-const ImAlivePort="30100"
-const comPORT="30101"
+const ImAlivePort="30103"
+const comPORT="30102"
 
 func Communication(sendChan chan string, getChan chan string){
     ch:=make(chan []IPandTimeStamp)
@@ -26,16 +26,19 @@ func Communication(sendChan chan string, getChan chan string){
     go recieveMsg(master,getChan,MyIP)
     go timeStampCheck(ch)
     for{
+       // fmt.Println("enter coms")
         select {
         case AliveList=<-ch:
-            //fmt.Println("read CH")
+         //   fmt.Println("read CH")
             AliveList=IPsort(AliveList)
-            fmt.Println(AliveList)
+         //   fmt.Println(AliveList)
             master<-AliveList[0].IPadr
             ch<-AliveList
-         //   fmt.Println("wrote CH")
+        //    fmt.Println("wrote CH")
         case <-time.After(time.Second*2):
+        case 
         }
+       // fmt.Println("exit coms")
     }
 }
 
@@ -59,7 +62,9 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
     x:=0
     for{
         x=0
+      //  fmt.Println("enter loop")
         newMsg=<-alivechan
+      //  fmt.Println("enter loop2")
         IPadr=newMsg.from
         for i,IP:=range IPlist{
             if IP.IPadr==IPadr{
@@ -73,7 +78,7 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
             IPlist=append(IPlist,iptime)
         }
         ch<-IPlist
-       // fmt.Println("I'm alive: wrote to ch")
+      //  fmt.Println("I'm alive: wrote to ch")
         IPlist=<-ch
        // fmt.Println("I'm Alive: Read from ch")
        // fmt.Println("I'm Alive IPlist :", IPlist)
@@ -85,25 +90,31 @@ func sendMsg(master,sendChan chan string,MyIP string){
     for{
         select{
         case mst=<-master:
+   //         fmt.Println("sendMsg: New master")
         case msg=<-sendChan:
+            fmt.Println("sending to master")
             con:=getUDPcon(mst,comPORT)
             Smsg:=makeMessage(MyIP,mst,msg)
             Bmsg:=msgToByte(Smsg)
             con.Write(Bmsg)
+            fmt.Println("sendt to master")
         }
     }
 }
 
 func recieveMsg(master,getChan chan string,MyIP string){
-    var mst string
     var Msg Message
     msg:=make(chan Message)
-    mst=<-master
-    go listenerCon(mst,comPORT,MyIP,msg)
+    go listenerCon("",comPORT,MyIP,msg)
     for{
-        Msg=<-msg
-        fmt.Println("Received Message")
-        getChan<-Msg.from+Msg.to+Msg.info
+         
+        select{
+  //      case mst=<-master:
+  //          fmt.Println("recievemsg: new master")
+        case Msg=<-msg:
+            getChan<-Msg.from+Msg.to+Msg.info
+        case <-time.After(time.Second*2):
+        }
     }
 }
 
