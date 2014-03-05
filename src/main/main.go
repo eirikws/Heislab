@@ -7,9 +7,11 @@ import(
     ."runtime"
     com "./../communication"
     elev "./../elevator"
- //   "time"
+    "time"
 
 )
+
+
 
 func main(){
    // x:=0
@@ -17,7 +19,7 @@ func main(){
     getMsg:=make(chan string)
     buttons:=make(chan elev.ElevButtons)
     msgbuttons:=make (chan elev.ElevButtons)
-    var msg string
+  //  var msg string
     var button elev.ElevButtons
     go com.Communication(sendMsg,getMsg)
     direction :=make(chan elev.CALL_DIRECTION)
@@ -37,10 +39,10 @@ func main(){
     go elev.MakeInfoStr(sendMsg,msgbuttons)
     buttons<-button
     for{
-        select{
-        case msg=<-getMsg:
+     //   select{
+      /*  case msg=<-getMsg:
         fmt.Println(msg)
-        }
-        //time.Sleep(time.Second)
+        }*/
+        time.Sleep(time.Second)
     }
 }

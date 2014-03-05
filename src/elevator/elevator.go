@@ -75,6 +75,7 @@ func ButtonsAndLights(buttons chan ElevButtons){
 func Check_buttons(buttons chan ElevButtons,msgbuttons chan ElevButtons) bool{
 	var elbut ElevButtons
 	var x int
+	var i int
 	for{
 	   x=0
 		elbut=<-buttons
@@ -111,9 +112,11 @@ func Check_buttons(buttons chan ElevButtons,msgbuttons chan ElevButtons) bool{
 			   }
 			elbut.stop_button=true
 		}
-		i:=elev_get_floor_sensor_signal()
-		if i!=-1 && i!=elev_get_floor_sensor_signal(){
-		    x=1
+		i=elev_get_floor_sensor_signal()
+		if i!=-1{
+		    if elbut.current_floor!=i{
+		       x=1
+		    }
 		    elbut.current_floor=i
 		}
 		if x==1{
@@ -187,33 +190,24 @@ func Elev_set_speed(myDir chan CALL_DIRECTION){
         nowDir=<-myDir
         switch nowDir{
             case CALL_UP:
-            fmt.Println("Goes UP!!")
             io_clear_bit(MOTORDIR)
             io_write_analog(MOTOR,DRIVE)
             case CALL_DOWN:
-            fmt.Println("Goes DOWN!!!")
             io_set_bit(MOTORDIR)
             io_write_analog(MOTOR,DRIVE)
             case CALL_COMMAND:
             if lastDir==CALL_UP{
-                fmt.Println("Stopping on the way up!!!")
                 io_set_bit(MOTORDIR)
-                fmt.Println("Stopping on the way up2!!!")
                 time.Sleep(SLEEPTIME)
-                fmt.Println("Stopping on the way up3!!!")
                 io_write_analog(MOTOR,STOPT)
-                fmt.Println("Stopping on the way up4!!!")
-                
             }
             if lastDir==CALL_DOWN{
-                fmt.Println("Stopping on the way down!!!")
                 io_clear_bit(MOTORDIR)
                 time.Sleep(SLEEPTIME)
                 io_write_analog(MOTOR,STOPT)
             }
             
         }
-        fmt.Println("done Switching dir")
         lastDir=nowDir
     }
 }

@@ -5,6 +5,17 @@ import (
     "fmt"
 )
 
+type ElevButtons struct{
+    u_buttons[3] bool
+    d_buttons[3] bool
+    c_buttons[4] bool
+    stop_button bool
+    current_floor int
+    obstruction bool
+    door_open bool
+}
+
+
 type IPandTimeStamp struct{
    IPadr string
    Timestamp time.Time
@@ -15,7 +26,8 @@ const comPORT="30102"
 
 func Communication(sendChan chan string, getChan chan string){
     ch:=make(chan []IPandTimeStamp)
-    
+    var from,msg string
+    var eleButtons ElevButtons
     var AliveList []IPandTimeStamp
     master:=make(chan string)
     MyIP:=getMyIP()
@@ -36,14 +48,16 @@ func Communication(sendChan chan string, getChan chan string){
             ch<-AliveList
         //    fmt.Println("wrote CH")
         case <-time.After(time.Second*2):
-        case 
+        case msg=<-getChan:
+            from,eleButtons=ReadMsg(msg)
+            fmt.Println(from,eleButtons)
         }
        // fmt.Println("exit coms")
     }
 }
 
 func sendImAlive(MyIP, BIP string){
-    msg:=makeMessage(MyIP,"ALL","I'm Alive")
+    msg:=makeMessage(MyIP,"I'm Alive")
     con:=getUDPcon(BIP,ImAlivePort)
     bmsg:=msgToByte(msg)
     for {
@@ -94,7 +108,7 @@ func sendMsg(master,sendChan chan string,MyIP string){
         case msg=<-sendChan:
             fmt.Println("sending to master")
             con:=getUDPcon(mst,comPORT)
-            Smsg:=makeMessage(MyIP,mst,msg)
+            Smsg:=makeMessage(MyIP,msg)
             Bmsg:=msgToByte(Smsg)
             con.Write(Bmsg)
             fmt.Println("sendt to master")
@@ -112,7 +126,7 @@ func recieveMsg(master,getChan chan string,MyIP string){
   //      case mst=<-master:
   //          fmt.Println("recievemsg: new master")
         case Msg=<-msg:
-            getChan<-Msg.from+Msg.to+Msg.info
+            getChan<-Msg.from+Msg.info
         case <-time.After(time.Second*2):
         }
     }
