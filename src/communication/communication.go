@@ -26,9 +26,12 @@ const comPORT="30102"
 
 func Communication(sendChan chan string, getChan chan string){
     ch:=make(chan []IPandTimeStamp)
+    deletedIP:=make(chan string)
+    var IPadr string
     var from,msg string
     var eleButtons ElevButtons
     var AliveList []IPandTimeStamp
+    elevInfo:= make(map[string]ElevButtons)
     master:=make(chan string)
     MyIP:=getMyIP()
     BIP:=getBIP(MyIP)
@@ -36,24 +39,62 @@ func Communication(sendChan chan string, getChan chan string){
     go imAliveListener(MyIP,BIP,ch)
     go sendMsg(master,sendChan,MyIP)
     go recieveMsg(master,getChan,MyIP)
-    go timeStampCheck(ch)
+    go timeStampCheck(ch,deletedIP)
     for{
-       // fmt.Println("enter coms")
         select {
         case AliveList=<-ch:
-         //   fmt.Println("read CH")
             AliveList=IPsort(AliveList)
-         //   fmt.Println(AliveList)
             master<-AliveList[0].IPadr
             ch<-AliveList
-        //    fmt.Println("wrote CH")
+        case IPadr=<-deletedIP:
+        		delete(elevInfo,IPadr)
+        		fmt.Println(elevInfo)
         case <-time.After(time.Second*2):
         case msg=<-getChan:
             from,eleButtons=ReadMsg(msg)
-            fmt.Println(from,eleButtons)
+            elevInfo[from]=eleButtons
+           	spreadOrders(elevInfo)
+           	for key,val:=range(elevInfo){
+           		sendMsg("",sendChan,MyIP)
+           	}
+            fmt.Println(elevInfo)
         }
-       // fmt.Println("exit coms")
     }
+}
+
+func spreadOrders(info map[string]ElevButtons){
+	u:=[]bool{false,false,false}
+	d:=[]bool{false,false,false}
+	var temp ElevButtons
+	for _,val:=range(info){
+		
+		for i:=0; i<3;i++{
+			if val.u_buttons[i]==true{
+				fmt.Println("u", i, "true")
+				u[i]=true
+			}
+			if val.d_buttons[i]==true{
+				fmt.Println("d", i, "true")
+				d[i]=true
+			}
+		}
+			
+	}
+	for key,val:=range(info){
+		temp=val
+		for i:=0; i<3;i++{
+			if u[i]==true{
+				temp.u_buttons[i]=true
+				info[key]=temp
+				fmt.Println(key,"u2",i,"true")
+			}
+			if d[i]==true{
+				temp.d_buttons[i]=true
+				info[key]=temp
+				fmt.Println(key,"d2",i,"true")
+			}
+		}
+	}
 }
 
 func sendImAlive(MyIP, BIP string){

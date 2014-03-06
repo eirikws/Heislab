@@ -49,7 +49,7 @@ func IPsort(list []IPandTimeStamp) []IPandTimeStamp{
     return newlist
 }
     
-func timeStampCheck(list chan []IPandTimeStamp){
+func timeStampCheck(list chan []IPandTimeStamp,deletedIP chan string){
     var IPlist []IPandTimeStamp
     var newlist []IPandTimeStamp
     var didWeDelete int
@@ -60,6 +60,7 @@ func timeStampCheck(list chan []IPandTimeStamp){
         for _,val:= range(IPlist){
             if val.Timestamp.Before(time.Now()){
                 didWeDelete=1
+                deletedIP<-val.IPadr
                 for _,bval:=range(IPlist){
                     if val.IPadr!=bval.IPadr{
                         newlist=append(newlist,bval)
