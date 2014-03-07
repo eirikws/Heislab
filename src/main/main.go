@@ -8,6 +8,7 @@ import(
     com "./../communication"
     elev "./../elevator"
     "time"
+    gen "./../genDecl"
 
 )
 
@@ -15,13 +16,13 @@ import(
 
 func main(){
    // x:=0
-    sendMsg:=make(chan string)
+    sendMsgToMaster:=make(chan string)
     getMsg:=make(chan string)
-    buttons:=make(chan elev.ElevButtons)
-    msgbuttons:=make (chan elev.ElevButtons)
-  //  var msg string
-    var button elev.ElevButtons
-    go com.Communication(sendMsg,getMsg)
+    buttons:=make(chan gen.ElevButtons)
+    msgbuttons:=make (chan gen.ElevButtons)
+    var msg string
+    var button gen.ElevButtons
+    go com.Communication(sendMsgToMaster,getMsg)
     direction :=make(chan elev.CALL_DIRECTION)
     GOMAXPROCS(NumCPU())
 	
@@ -36,13 +37,14 @@ func main(){
     elev.Elevator_init(direction)
     go elev.Set_lights(buttons)
     go elev.Check_buttons(buttons,msgbuttons)
-    go elev.MakeInfoStr(sendMsg,msgbuttons)
+    go gen.MakeInfoStr(sendMsgToMaster,msgbuttons)
     buttons<-button
     for{
-     //   select{
-      /*  case msg=<-getMsg:
-        fmt.Println(msg)
-        }*/
-        time.Sleep(time.Second)
+
+    	msg=<-getMsg
+    	button=<-buttons
+    	buttons<-gen.StringToButton(msg)
+    	fmt.Println("wroteTOButtons")
+    	time.Sleep(time.Second*0)
     }
 }
