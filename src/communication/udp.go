@@ -10,9 +10,7 @@ func getUDPcon(ipAdr string, port string) *net.UDPConn{
         if err != nil {
                 fmt.Println("fail")
         }
-        return con     
-//        Bmessage:=msgToByte(message)
-//        con.Write(Bmessage)
+        return con
 }
 
 func listenerCon(ipAdr string, port string,MY_IP string,ch chan Message){
@@ -24,7 +22,6 @@ func listenerCon(ipAdr string, port string,MY_IP string,ch chan Message){
     var msg Message
     for {
         if err != nil { return }
- //       fmt.Println("1")
         psock.ReadFromUDP(buf)
         msg=byteToMsg(buf)
         ch<-msg

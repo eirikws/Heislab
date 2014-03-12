@@ -9,7 +9,6 @@ import(
     elev "./../elevator"
     "time"
     gen "./../genDecl"
-
 )
 
 
@@ -26,9 +25,6 @@ func main(){
     direction :=make(chan elev.CALL_DIRECTION)
     GOMAXPROCS(NumCPU())
 	
-
-
-
     elev.Init_buttons(&button)
 
     elev.Elev_init()
@@ -38,6 +34,7 @@ func main(){
     go elev.Set_lights(buttons)
     go elev.Check_buttons(buttons,msgbuttons)
     go gen.MakeInfoStr(sendMsgToMaster,msgbuttons)
+    go elev.Run_elevator(direction,buttons)
     buttons<-button
     for{
 

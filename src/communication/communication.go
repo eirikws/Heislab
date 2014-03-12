@@ -1,13 +1,11 @@
 package communication
 
 import (
+    mst "./../master"
     "time"
     "fmt"
     gen "./../genDecl"
 )
-
-
-
 
 type IPandTimeStamp struct{
    IPadr string
@@ -21,9 +19,11 @@ func Communication(sendChanMaster chan string, getChan chan string){
     ch:=make(chan []IPandTimeStamp)
     receiveChan:=make(chan string)
     deletedIP:=make(chan string)
-    var LastMaster string
-    var IPadr string
-    var from,msg string
+    getElevInfoChan:=make(chan map[string]gen.ElevButtons)
+	orders:=make(chan string)
+    //var LastMaster string
+    //var IPadr string
+    var IPadr,LastMaster,from,msg string
     var eleButtons gen.ElevButtons
     var AliveList []IPandTimeStamp
     elevInfo:= make(map[string]gen.ElevButtons)
@@ -35,12 +35,14 @@ func Communication(sendChanMaster chan string, getChan chan string){
     go sendMsgToMaster(master,sendChanMaster,MyIP)
     go recieveMsg(master,receiveChan,MyIP)
     go timeStampCheck(ch,deletedIP)
+    
+
+	go mst.Master(master,getElevInfoChan,orders)
     for{
     	
         select {
         
         case AliveList=<-ch:
-        	fmt.Println("alivelist")
             AliveList=IPsort(AliveList)
             master<-AliveList[0].IPadr
             if LastMaster!=AliveList[0].IPadr{
@@ -61,9 +63,12 @@ func Communication(sendChanMaster chan string, getChan chan string){
             	from,eleButtons=gen.ReadMsg(msg)
             	elevInfo[from]=eleButtons
            		spreadOrders(elevInfo)
+           		getElevInfoChan<-elevInfo
+           		elevInfo=<-getElevInfoChan
            		for key,val:=range(elevInfo){
            			SendMsgToThisGuy(key,"C:"+gen.ElevButtonToStr(val))
            		}
+           		
            	}
         }
     }
@@ -119,9 +124,7 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
     x:=0
     for{
         x=0
-      //  fmt.Println("enter loop")
         newMsg=<-alivechan
-      //  fmt.Println("enter loop2")
         IPadr=newMsg.from
         for i,IP:=range IPlist{
             if IP.IPadr==IPadr{
@@ -134,10 +137,7 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
             IPlist=append(IPlist,iptime)
         }
         ch<-IPlist
-      //  fmt.Println("I'm alive: wrote to ch")
         IPlist=<-ch
-       // fmt.Println("I'm Alive: Read from ch")
-       // fmt.Println("I'm Alive IPlist :", IPlist)
     }
 }
 
@@ -177,6 +177,7 @@ func recieveMsg(master,getChan chan string,MyIP string){
   //          fmt.Println("recievemsg: new master")
         case Msg=<-msg:
             getChan<-Msg.from+Msg.info
+            fmt.Println(Msg.from+Msg.info)
         case <-time.After(time.Second*2):
         }
     }

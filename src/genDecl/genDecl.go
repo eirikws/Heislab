@@ -4,7 +4,7 @@ package genDecl
 import(
 	 "strconv"
 	 "strings"
-//	 "fmt"
+	// "fmt"
 )
 
 
@@ -16,6 +16,8 @@ type ElevButtons struct{
     Current_floor int
     Obstruction bool
     Door_open bool
+    Planned_stops[4] bool
+    Dir bool
 }
 
 func MakeInfoStr(sendMsgTo chan string,msgbuttons chan ElevButtons){
@@ -29,7 +31,7 @@ func MakeInfoStr(sendMsgTo chan string,msgbuttons chan ElevButtons){
 }
 
 func ElevButtonToStr(button ElevButtons) string{
-	return "ub:"+strconv.FormatBool(button.U_buttons[0])+"."+strconv.FormatBool(button.U_buttons[1])+"."+strconv.FormatBool(button.U_buttons[2])+";db:"+strconv.FormatBool(button.D_buttons[0])+"."+strconv.FormatBool(button.D_buttons[1])+"."+strconv.FormatBool(button.D_buttons[2])+";cb:"+strconv.FormatBool(button.C_buttons[0])+"."+strconv.FormatBool(button.C_buttons[1])+"."+strconv.FormatBool(button.C_buttons[2])+"."+strconv.FormatBool(button.C_buttons[3])+";sb:"+strconv.FormatBool(button.Stop_button)+";cf:"+strconv.Itoa(button.Current_floor)+";obs:"+strconv.FormatBool(button.Obstruction)+";do:"+strconv.FormatBool(button.Door_open)
+	return "ub:"+strconv.FormatBool(button.U_buttons[0])+"."+strconv.FormatBool(button.U_buttons[1])+"."+strconv.FormatBool(button.U_buttons[2])+";db:"+strconv.FormatBool(button.D_buttons[0])+"."+strconv.FormatBool(button.D_buttons[1])+"."+strconv.FormatBool(button.D_buttons[2])+";cb:"+strconv.FormatBool(button.C_buttons[0])+"."+strconv.FormatBool(button.C_buttons[1])+"."+strconv.FormatBool(button.C_buttons[2])+"."+strconv.FormatBool(button.C_buttons[3])+";sb:"+strconv.FormatBool(button.Stop_button)+";cf:"+strconv.Itoa(button.Current_floor)+";obs:"+strconv.FormatBool(button.Obstruction)+";do:"+strconv.FormatBool(button.Door_open)+";ps:"+strconv.FormatBool(button.Planned_stops[0])+"."+strconv.FormatBool(button.Planned_stops[1])+"."+strconv.FormatBool(button.Planned_stops[2])+"."+strconv.FormatBool(button.Planned_stops[3])+";dir:"+strconv.FormatBool(button.Dir)+";dummy:  "
 
 }
 
@@ -56,11 +58,15 @@ func StringToButton(str string) ElevButtons{
          } else if typ=="sb"{
             myButton.Stop_button=(jval=="true")
          } else if typ=="cf"{
-              myButton.Current_floor,_=strconv.Atoi(jval)
+            myButton.Current_floor,_=strconv.Atoi(jval)
          } else if typ=="obs"{
             myButton.Obstruction=(jval=="true")
          } else if typ=="do"{
             myButton.Door_open=(jval=="true")
+         } else if typ=="ps"{
+            myButton.Planned_stops[j]=(jval=="true")
+         } else if typ=="dir"{
+            myButton.Dir=(jval=="true")
          }
       }
    }
