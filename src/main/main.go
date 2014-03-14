@@ -41,7 +41,7 @@ func main(){
     	msg=<-getMsg
     	button=<-buttons
     	buttons<-gen.StringToButton(msg)
-    	fmt.Println("wroteTOButtons")
+    	fmt.Println("wrote to buttons")
     	time.Sleep(time.Second*0)
     }
 }

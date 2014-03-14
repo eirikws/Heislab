@@ -12,8 +12,8 @@ type IPandTimeStamp struct{
    Timestamp time.Time
 }
 
-const ImAlivePort="30101"
-const comPORT="30105"
+const ImAlivePort="30108"
+const comPORT="30107"
 
 func Communication(sendChanMaster chan string, getChan chan string){
     ch:=make(chan []IPandTimeStamp)
@@ -35,16 +35,16 @@ func Communication(sendChanMaster chan string, getChan chan string){
     go sendMsgToMaster(master,sendChanMaster,MyIP)
     go recieveMsg(master,receiveChan,MyIP)
     go timeStampCheck(ch,deletedIP)
-    
-
-	go mst.Master(master,getElevInfoChan,orders)
+    go mst.Master(master,getElevInfoChan,orders)
     for{
-    	
+    	fmt.Println("coms")
         select {
         
         case AliveList=<-ch:
             AliveList=IPsort(AliveList)
+            fmt.Println("givemaster")
             master<-AliveList[0].IPadr
+            fmt.Println("givemaster2")
             if LastMaster!=AliveList[0].IPadr{
             	sendChanMaster<-"U:"+gen.ElevButtonToStr(elevInfo[MyIP])
             }
@@ -58,23 +58,67 @@ func Communication(sendChanMaster chan string, getChan chan string){
        		fmt.Println("got msg", msg[15:17])
         	switch {
         	case msg[15:17]=="C:":	
+        		fmt.Println("got a C")
         		getChan<-msg[17:]
+        		fmt.Println("wrote a C")
         	case msg[15:17]=="U:":
+        		fmt.Println("Got A U")
             	from,eleButtons=gen.ReadMsg(msg)
+            	fmt.Println("Got A U2")
+            	turnOffLightsControl(elevInfo,from,eleButtons)
+            	fmt.Println("Got A U3")
             	elevInfo[from]=eleButtons
            		spreadOrders(elevInfo)
+           		fmt.Println("Got A U4")
            		getElevInfoChan<-elevInfo
+           		fmt.Println("Got A U44")
            		elevInfo=<-getElevInfoChan
+           		fmt.Println("Got A U5")
            		for key,val:=range(elevInfo){
            			SendMsgToThisGuy(key,"C:"+gen.ElevButtonToStr(val))
            		}
+           		fmt.Println("done with U")
            		
            	}
         }
     }
 }
 
+func turnOffLightsControl(InfoMap map[string]gen.ElevButtons, IPadrFrom string, newInfo gen.ElevButtons){
+	u:=[]bool{false,false,false}
+	d:=[]bool{false,false,false}
+	var dummyvar gen.ElevButtons
+	for i:=0 ; i<3 ; i++{
+		if InfoMap[IPadrFrom].U_buttons[i] && !newInfo.U_buttons[i]{
+			u[i]=true
+		}
+		if InfoMap[IPadrFrom].D_buttons[i] && !newInfo.D_buttons[i]{
+			d[i]=true
+		}
+	}
+	for i,val:=range(u){
+		if val{
+			for key,val:=range(InfoMap){
+				dummyvar=val
+				dummyvar.U_buttons[i]=false
+				InfoMap[key]=dummyvar
+			}
+		}
+	}
+	for i,val:=range(d){
+		if val{
+			for key,val:=range(InfoMap){
+				dummyvar=val
+				dummyvar.D_buttons[i]=false
+				InfoMap[key]=dummyvar
+			}
+		}
+	}
+}
+
+
 func spreadOrders(info map[string]gen.ElevButtons){
+	fmt.Println("nr1")
 	u:=[]bool{false,false,false}
 	d:=[]bool{false,false,false}
 	var temp gen.ElevButtons
@@ -89,6 +133,7 @@ func spreadOrders(info map[string]gen.ElevButtons){
 			}
 		}
 	}
+	fmt.Println("nr2")
 	for key,val:=range(info){
 		temp=val
 		for i:=0; i<3;i++{
@@ -102,6 +147,7 @@ func spreadOrders(info map[string]gen.ElevButtons){
 			}
 		}
 	}
+	fmt.Println("nr3")
 }
 
 func sendImAlive(MyIP, BIP string){
