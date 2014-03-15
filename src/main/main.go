@@ -2,7 +2,7 @@ package main
 
 
 import(
-    "fmt"
+    //"fmt"
     //"net"
     ."runtime"
     com "./../communication"
@@ -28,7 +28,6 @@ func main(){
     elev.Init_buttons(&button)
 
     elev.Elev_init()
-    fmt.Println("after elev_init")
     go elev.Elev_set_speed(direction)
     elev.Elevator_init(direction)
     go elev.Set_lights(buttons)
@@ -41,7 +40,7 @@ func main(){
     	msg=<-getMsg
     	button=<-buttons
     	buttons<-gen.StringToButton(msg)
-    	fmt.Println("wrote to buttons")
     	time.Sleep(time.Second*0)
+    	
     }
 }

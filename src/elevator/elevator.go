@@ -20,7 +20,7 @@ const (
 const (
     DRIVE=3248
     STOPT=2048
-    SLEEPTIME=(time.Millisecond * 15)
+    SLEEPTIME=(time.Millisecond * 10)
 )
 
 var lamp_channel_matrix =[N_FLOORS][N_BUTTONS]int{

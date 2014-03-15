@@ -68,7 +68,6 @@ func timeStampCheck(list chan []IPandTimeStamp,deletedIP chan string){
                 }
                 list<-newlist
                 break
-                  
             }
         }
         if didWeDelete==0{

@@ -20,14 +20,20 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
     for{
         select{
             case mst=<-master:
-                fmt.Println(mst)
             case elevInfoMap=<-elevInfoChan:
                 if mst!=getMyIP(){
+                	elevInfoChan<-elevInfoMap
                     continue
                 }
-                
                 u=elevInfoMap[getMyIP()].U_buttons
                 d=elevInfoMap[getMyIP()].D_buttons
+                
+                for key,val:=range(elevInfoMap){
+                	dummyElevInfo=val
+                	dummyElevInfo.Planned_stops=[4]bool{false,false,false,false}
+                	elevInfoMap[key]=dummyElevInfo
+                }
+                
                 
                 for key,val := range(elevInfoMap){
                     dummyElevInfo=val
@@ -38,7 +44,6 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
 					}
 					elevInfoMap[key]=dummyElevInfo
                 }
-                
 				for floor,order :=range(u){
 					dummycost=1000000
 					if order{
@@ -56,7 +61,6 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
                 		elevInfoMap[dummyLowestCostIP]=dummyElevInfo
                 	}
                 }
-                
                 for floor,order :=range(d){
 					dummycost=1000000
 					if order{
@@ -74,14 +78,8 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
                 		elevInfoMap[dummyLowestCostIP]=dummyElevInfo
                 	}
                 }
-                
-                
-                
-                
                 elevInfoChan<-elevInfoMap
-                
          }
-            
     }
 }
 
@@ -96,13 +94,11 @@ func costFunc(elevator gen.ElevButtons,dir bool,floor int)int{
 		if val{
 			dummy=1
 		}
+		if dummy==0 && (searchFloor==floor && searchDir==dir) {
+			return 0
+		}
 	}
-	if dummy==0 && (searchFloor==floor && searchDir==dir) {
-		return 0
-	}
-	
-	for !(searchFloor==floor && searchDir==dir) && cost!=0{
-		
+	for !(searchFloor==floor && searchDir==dir){
 		cost++
 		if searchDir{
 			searchFloor++
@@ -127,7 +123,6 @@ func costFunc(elevator gen.ElevButtons,dir bool,floor int)int{
 		if dummy==0 {
 			searchDir= !searchDir
 		}
-	
 	}
 	return cost
 }
