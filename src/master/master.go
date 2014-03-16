@@ -1,14 +1,14 @@
 package master
 
 import(
-    "fmt"
+  //  "fmt"
     gen "./../genDecl"
-    "net"
-    "strings"
+//    "net"
+ //   "strings"
 )
 
 
-func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orders chan string){
+func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orders chan string,MyIP string){
     var mst string
     var u [3]bool
 	var d [3]bool
@@ -21,12 +21,12 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
         select{
             case mst=<-master:
             case elevInfoMap=<-elevInfoChan:
-                if mst!=getMyIP(){
+                if mst!=MyIP{
                 	elevInfoChan<-elevInfoMap
                     continue
                 }
-                u=elevInfoMap[getMyIP()].U_buttons
-                d=elevInfoMap[getMyIP()].D_buttons
+                u=elevInfoMap[MyIP].U_buttons
+                d=elevInfoMap[MyIP].D_buttons
                 
                 for key,val:=range(elevInfoMap){
                 	dummyElevInfo=val
@@ -126,17 +126,6 @@ func costFunc(elevator gen.ElevButtons,dir bool,floor int)int{
 	}
 	return cost
 }
-
-func getMyIP() string{
-    allIPs,err:=net.InterfaceAddrs()
-    if err!=nil{
-        fmt.Println("IP receiving errors!!!!!!!!\n")
-        return ""
-    }
-    return strings.Split(allIPs[1].String(),"/")[0]
-}
-
-
 
 
 

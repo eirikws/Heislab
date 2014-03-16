@@ -38,17 +38,19 @@ var button_channel_matrix =[N_FLOORS][N_BUTTONS]int{
 }
 
 
-func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons chan gen.ElevButtons){
+func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan gen.ElevButtons){
     var elevInfo gen.ElevButtons
-    var dummy int
+    var dummy,newStop int
     var doorTime time.Time
+    newStop=0
     for {
         dummy=0
         select{
         case elevInfo=<-elevButtons:
         case <-time.After(time.Millisecond*5):
-        
+            
         	if elevInfo.Door_open{
+            newStop=0
         		if doorTime.Before(time.Now()){
         			elevInfo.Door_open=false
         	//		elevInfo.Planned_stops[j]=false
@@ -72,6 +74,7 @@ func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons chan gen.ElevButton
             }
             if j!=-1 && elevInfo.Planned_stops[j] && dummy==1{
                 fmt.Println("STOP")
+                newStop=1
                 setElevDir<-CALL_COMMAND
                 
                 elevInfo.Door_open=true
@@ -110,6 +113,9 @@ func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons chan gen.ElevButton
                 }
             }
             elevButtons<-elevInfo
+            if newStop==1{
+                msgButtons<-elevInfo
+            }
         }   
         
     }
@@ -118,8 +124,8 @@ func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons chan gen.ElevButton
 
 func Check_buttons(buttons chan gen.ElevButtons,msgbuttons chan gen.ElevButtons) bool{
 	var elbut gen.ElevButtons
-	var x int
-	var i int
+	var x,i int
+	//var i int
 	for{
 		x=0
 		elbut=<-buttons

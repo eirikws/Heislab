@@ -5,9 +5,9 @@ import(
     //"fmt"
     //"net"
     ."runtime"
+    "time"
     com "./../communication"
     elev "./../elevator"
-    "time"
     gen "./../genDecl"
 )
 
@@ -33,10 +33,10 @@ func main(){
     go elev.Set_lights(buttons)
     go elev.Check_buttons(buttons,msgbuttons)
     go gen.MakeInfoStr(sendMsgToMaster,msgbuttons)
-    go elev.Run_elevator(direction,buttons)
+    go elev.Run_elevator(direction,buttons,msgbuttons)
     buttons<-button
     for{
-
+        
     	msg=<-getMsg
     	button=<-buttons
     	buttons<-gen.StringToButton(msg)
