@@ -176,6 +176,17 @@ func Check_buttons(buttons chan gen.ElevButtons,msgbuttons chan gen.ElevButtons)
 	}
 }
 
+/*
+func MakeInfoStr(sendMsgTo chan string,msgbuttons chan ElevButtons){
+	var button ElevButtons
+	var str string
+	for{
+		button=<-msgbuttons
+		str=ElevButtonToStr(button)
+		sendMsgTo<-str
+	}
+}
+*/
 func Set_lights(buttons chan gen.ElevButtons){
 	var button gen.ElevButtons
 	for{

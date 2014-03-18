@@ -5,7 +5,7 @@ import(
     //"fmt"
     //"net"
     ."runtime"
-    "time"
+    //"time"
     com "./../communication"
     elev "./../elevator"
     gen "./../genDecl"
@@ -15,11 +15,9 @@ import(
 
 func main(){
    // x:=0
-    sendMsgToMaster:=make(chan string)
-    getMsg:=make(chan string)
+    sendMsgToMaster:=make(chan gen.ElevButtons)
+    getMsg:=make(chan gen.ElevButtons)
     buttons:=make(chan gen.ElevButtons)
-    msgbuttons:=make (chan gen.ElevButtons)
-    var msg string
     var button gen.ElevButtons
     go com.Communication(sendMsgToMaster,getMsg)
     direction :=make(chan elev.CALL_DIRECTION)
@@ -31,16 +29,18 @@ func main(){
     go elev.Elev_set_speed(direction)
     elev.Elevator_init(direction)
     go elev.Set_lights(buttons)
-    go elev.Check_buttons(buttons,msgbuttons)
-    go gen.MakeInfoStr(sendMsgToMaster,msgbuttons)
-    go elev.Run_elevator(direction,buttons,msgbuttons)
+    go elev.Check_buttons(buttons,sendMsgToMaster)
+    go elev.Run_elevator(direction,buttons,sendMsgToMaster)
     buttons<-button
     for{
         
-    	msg=<-getMsg
-    	button=<-buttons
-    	buttons<-gen.StringToButton(msg)
-    	time.Sleep(time.Second*0)
+    	//msg=<-getMsg
+    	//button=<-buttons
+    	//buttons=<-getMsg
+    	//time.Sleep(time.Second*0)
+    	
+    	button=<-getMsg
+    	buttons<-button
     	
     }
 }

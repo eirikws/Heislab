@@ -15,14 +15,17 @@ type IPandTimeStamp struct{
 
 const ImAlivePort="30108"
 const comPORT="30107"
+const lostInternetIP="192.168.0.1"
 
-func Communication(sendChanMaster chan string, getChan chan string){
+
+func Communication(sendChanMaster chan gen.ElevButtons, getChan chan gen.ElevButtons){
     ch:=make(chan []IPandTimeStamp)
-    receiveChan:=make(chan string)
+    receiveChan:=make(chan Message)
     deletedIP:=make(chan string)
     getElevInfoChan:=make(chan map[string]gen.ElevButtons)
 	orders:=make(chan string)
-    var IPadr,LastMaster,from,msg string
+    var IPadr,LastMaster,from string
+    var msg Message
     var eleButtons gen.ElevButtons
     var AliveList []IPandTimeStamp
     elevInfo:= make(map[string]gen.ElevButtons)
@@ -44,7 +47,7 @@ func Communication(sendChanMaster chan string, getChan chan string){
             master<-AliveList[0].IPadr
             if LastMaster!=AliveList[0].IPadr{
                 fmt.Println("yep")
-            	sendChanMaster<-"U:"+gen.ElevButtonToStr(elevInfo[MyIP])
+            	sendChanMaster<-elevInfo[MyIP]
             }
             LastMaster=AliveList[0].IPadr
             ch<-AliveList
@@ -52,12 +55,12 @@ func Communication(sendChanMaster chan string, getChan chan string){
         	delete(elevInfo,IPadr)
         	fmt.Println("got deleted IP")
         case msg=<-receiveChan:
-       		fmt.Println("got msg", msg[15:17])
+       		//fmt.Println("got msg", msg.typ,msg)
         	switch {
-        	case msg[15:17]=="C:":
-        		getChan<-msg[17:]
-        	case msg[15:17]=="U:":
-            	from,eleButtons=gen.ReadMsg(msg)
+        	case msg.typ=="C":
+        		getChan<-stringToButton(msg.info)
+        	case msg.typ=="U":
+            	from,eleButtons=msg.from,stringToButton(msg.info)
             	turnOffLights(elevInfo,from,eleButtons)
             	elevInfo[from]=eleButtons
            		spreadOrders(elevInfo)
@@ -138,7 +141,7 @@ func spreadOrders(info map[string]gen.ElevButtons){
 func sendImAlive(MyIP, BIP string){
     
     for {
-        msg:=makeMessage(MyIP,"I'm Alive")
+        msg:=makeMessage("",MyIP,"I'm Alive")
         con:=getUDPcon(BIP,ImAlivePort)
         if con!=nil{
             bmsg:=msgToByte(msg)
@@ -175,37 +178,47 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
     }
 }
 
-func sendMsgToMaster(master,sendChan chan string, MyIP string){
-    var mst,msg string
+func sendMsgToMaster(master chan string,sendChan chan gen.ElevButtons, MyIP string){
+    var mst string
+    var info gen.ElevButtons
     for{
         select{
         case mst=<-master:
             master<-mst
-        case msg=<-sendChan:
-            Smsg:=makeMessage(MyIP,msg)
+        case info=<-sendChan:
+            Smsg:=makeMessage("U",MyIP,elevButtonToStr(info))
             con:=getUDPcon(mst,comPORT)
+            if con==nil{
+            	con=getUDPcon(lostInternetIP,comPORT)
+            }
             Bmsg:=msgToByte(Smsg)
+            fmt.Println("yepppp")
             con.Write(Bmsg)
+            fmt.Println("yepppp2")
         }
     }
 }
 
 func sendMsgToThisGuy(IPadrTo string,elevInfo gen.ElevButtons,MyIP string){
-    info:=gen.ElevButtonToStr(elevInfo)
+    info:=elevButtonToStr(elevInfo)
 	con:=getUDPcon(IPadrTo,comPORT)
-	Smsg:=makeMessage(MyIP,info)
+	Smsg:=makeMessage("C",MyIP,info)
 	Bmsg:=msgToByte(Smsg)
 	con.Write(Bmsg)
 }
 
 
-func recieveMsg(receiveChan chan string,MyIP string){
+func recieveMsg(receiveChan chan Message,MyIP string){
     msg:=make(chan Message)
     var Msg Message
     go listenerCon("",comPORT,MyIP,msg)
     for{
         Msg=<-msg
-        receiveChan<-Msg.from+Msg.info
+        if Msg.from==lostInternetIP{
+        	Msg.from=MyIP
+		}
+		fmt.Println("receive msg: ",Msg)
+        receiveChan<-Msg
     }
 }
 

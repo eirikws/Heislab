@@ -1,10 +1,10 @@
 package master
 
 import(
-  //  "fmt"
+ //   "fmt"
     gen "./../genDecl"
-//    "net"
- //   "strings"
+ //   "net"
+//    "strings"
 )
 
 
@@ -126,11 +126,17 @@ func costFunc(elevator gen.ElevButtons,dir bool,floor int)int{
 	}
 	return cost
 }
+/*
+func getMyIP() string{
+    allIPs,err:=net.InterfaceAddrs()
+    if err!=nil{
+        fmt.Println("IP receiving errors!!!!!!!!\n")
+        return ""
+    }
+    return strings.Split(allIPs[1].String(),"/")[0]
+}
 
-
-
-
-
+*/
 
 
 
