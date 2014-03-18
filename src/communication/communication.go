@@ -4,7 +4,6 @@ import (
     mst "./../master"
     "time"
     "fmt"
-    "net"
     gen "./../genDecl"
 )
 
@@ -13,18 +12,12 @@ type IPandTimeStamp struct{
    Timestamp time.Time
 }
 
-type MsgToGuy struct{
-    IPadr string
-    msg gen.ElevButtons
-}
 
 const ImAlivePort="30108"
 const comPORT="30107"
 
 func Communication(sendChanMaster chan string, getChan chan string){
     ch:=make(chan []IPandTimeStamp)
-    interMsg:=make(chan Message)
-    msgToGuy:=make(chan MsgToGuy,10)
     receiveChan:=make(chan string)
     deletedIP:=make(chan string)
     getElevInfoChan:=make(chan map[string]gen.ElevButtons)
@@ -36,14 +29,15 @@ func Communication(sendChanMaster chan string, getChan chan string){
     master:=make(chan string)
     MyIP:=getMyIP()
     BIP:=getBIP(MyIP)
-    go SendMsgToThisGuy(interMsg,master,msgToGuy,MyIP)
     go sendImAlive(MyIP,BIP)
     go imAliveListener(MyIP,BIP,ch)
-    go sendMsgToMaster(master,sendChanMaster,interMsg,MyIP)
-    go recieveMsg(receiveChan,MyIP,interMsg)
+    go sendMsgToMaster(master,sendChanMaster,MyIP)
+    go recieveMsg(receiveChan,MyIP)
     go timeStampCheck(ch,deletedIP,MyIP)
     go mst.Master(master,getElevInfoChan,orders,MyIP)
+    fmt.Println(MyIP)
     for{
+        fmt.Println("coms",MyIP,LastMaster)
         select {
         case AliveList=<-ch:
             AliveList=IPsort(AliveList)
@@ -70,10 +64,7 @@ func Communication(sendChanMaster chan string, getChan chan string){
            		getElevInfoChan<-elevInfo
            		elevInfo=<-getElevInfoChan
            		for key,val:=range(elevInfo){
-           		    fmt.Println("to guy")
-           		    msgToGuy<-MsgToGuy{key,val}
-           		    time.Sleep(time.Millisecond*5)
-           		    fmt.Println("to guy2")
+           		    go sendMsgToThisGuy(key,val,MyIP)
            		}
            	}
         }
@@ -184,7 +175,7 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
     }
 }
 
-func sendMsgToMaster(master,sendChan chan string,interMsg chan Message, MyIP string){
+func sendMsgToMaster(master,sendChan chan string, MyIP string){
     var mst,msg string
     for{
         select{
@@ -192,57 +183,29 @@ func sendMsgToMaster(master,sendChan chan string,interMsg chan Message, MyIP str
             master<-mst
         case msg=<-sendChan:
             Smsg:=makeMessage(MyIP,msg)
-            
-            if mst==MyIP{
-                interMsg<-Smsg
-                continue
-            }
             con:=getUDPcon(mst,comPORT)
             Bmsg:=msgToByte(Smsg)
-            
             con.Write(Bmsg)
         }
     }
 }
 
-func SendMsgToThisGuy(interMsg chan Message,master chan string,msgAndIP chan MsgToGuy,MyIP string){
-    var inc MsgToGuy
-    var IP,mast string
-    var info gen.ElevButtons
-    var Smsg Message
-    var Bmsg []byte
-    var con *net.UDPConn
-    for{
-        select{
-        case mast=<-master:
-            //fmt.Println("new Master in sendmsgtotheguy :",mast)
-        case inc=<-msgAndIP:
-            IP=inc.IPadr
-            info=inc.msg
-            Smsg=makeMessage(MyIP,"C:"+gen.ElevButtonToStr(info))
-            fmt.Println("send msg to guy")
-            if mast==MyIP{
-                fmt.Println("send msg to guy2222")
-                interMsg<-Smsg
-                fmt.Println("send msg to guy2")
-                continue
-            }
-            fmt.Println("send msg to guy3")
-            Bmsg=msgToByte(Smsg)
-            con=getUDPcon(IP,comPORT)
-            con.Write(Bmsg)
-        }
-    }
+func sendMsgToThisGuy(IPadrTo string,elevInfo gen.ElevButtons,MyIP string){
+    info:=gen.ElevButtonToStr(elevInfo)
+	con:=getUDPcon(IPadrTo,comPORT)
+	Smsg:=makeMessage(MyIP,info)
+	Bmsg:=msgToByte(Smsg)
+	con.Write(Bmsg)
 }
 
-func recieveMsg(getChan chan string,MyIP string,msg chan Message){
+
+func recieveMsg(receiveChan chan string,MyIP string){
+    msg:=make(chan Message)
     var Msg Message
     go listenerCon("",comPORT,MyIP,msg)
     for{
-        fmt.Println("got msg in receive")
         Msg=<-msg
-        fmt.Println("receive : write")
-        getChan<-Msg.from+Msg.info
+        receiveChan<-Msg.from+Msg.info
     }
 }
 
