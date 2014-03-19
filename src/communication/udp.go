@@ -21,9 +21,14 @@ func listenerCon(ipAdr string, port string,MY_IP string,ch chan Message){
     buf := make([]byte,1024)
     var msg Message
     for {
-        if err != nil { return }
+        if err != nil {
+            fmt.Println("ListenerCon Fail")
+            return 
+        }
         psock.ReadFromUDP(buf)
         msg=byteToMsg(buf)
+        fmt.Println("ListenerCon: ",msg)
+        fmt.Println("listenerCon: ",msg.from)
         ch<-msg
     }
 }
