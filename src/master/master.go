@@ -1,7 +1,7 @@
 package master
 
 import(
- //   "fmt"
+   // "fmt"
     gen "./../genDecl"
  //   "net"
 //    "strings"
@@ -9,13 +9,11 @@ import(
 
 
 func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orders chan string,MyIP string){
-    var mst string
-    var u [3]bool
-	var d [3]bool
+    var mst,lowestCostIP string
+    var u,d [gen.N_FLOORS-1]bool
     elevInfoMap:=make(map[string]gen.ElevButtons)
     costMap:=make(map[string]int)
     var dummycost int
-    var dummyLowestCostIP string
     var dummyElevInfo gen.ElevButtons
     for{
         select{
@@ -30,7 +28,7 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
                 
                 for key,val:=range(elevInfoMap){
                 	dummyElevInfo=val
-                	dummyElevInfo.Planned_stops=[4]bool{false,false,false,false}
+                	dummyElevInfo.Planned_stops=[gen.N_FLOORS]bool{false}
                 	elevInfoMap[key]=dummyElevInfo
                 }
                 
@@ -53,12 +51,12 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
                 		for costkey,cost:=range(costMap){
                 			if cost<dummycost{
                 				dummycost=cost
-                				dummyLowestCostIP=costkey
+                				lowestCostIP=costkey
                 			}
                 		}
-                		dummyElevInfo=elevInfoMap[dummyLowestCostIP]
+                		dummyElevInfo=elevInfoMap[lowestCostIP]
                 		dummyElevInfo.Planned_stops[floor]=true
-                		elevInfoMap[dummyLowestCostIP]=dummyElevInfo
+                		elevInfoMap[lowestCostIP]=dummyElevInfo
                 	}
                 }
                 for floor,order :=range(d){
@@ -70,12 +68,12 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
                 		for costkey,cost:=range(costMap){
                 			if cost<dummycost{
                 				dummycost=cost
-                				dummyLowestCostIP=costkey
+                				lowestCostIP=costkey
                 			}
                 		}
-                		dummyElevInfo=elevInfoMap[dummyLowestCostIP]
+                		dummyElevInfo=elevInfoMap[lowestCostIP]
                 		dummyElevInfo.Planned_stops[floor+1]=true
-                		elevInfoMap[dummyLowestCostIP]=dummyElevInfo
+                		elevInfoMap[lowestCostIP]=dummyElevInfo
                 	}
                 }
                 elevInfoChan<-elevInfoMap
@@ -107,7 +105,7 @@ func costFunc(elevator gen.ElevButtons,dir bool,floor int)int{
 		}
 		i=searchFloor
 		dummy=0
-		for i<4 && i>-1{
+		for i<gen.N_FLOORS && i>-1{
 			if elevator.Planned_stops[i]{
 				dummy=1
 			}

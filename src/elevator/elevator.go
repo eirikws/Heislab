@@ -3,11 +3,8 @@ package elevator
 import(
 	"fmt"
 	"time"
-	gen "./../genDecl"
+	."./../genDecl"
 )
-
-const N_BUTTONS int=3
-const N_FLOORS int=4
 
 
 type CALL_DIRECTION int
@@ -38,27 +35,32 @@ var button_channel_matrix =[N_FLOORS][N_BUTTONS]int{
 }
 
 
-func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan gen.ElevButtons){
-    var elevInfo gen.ElevButtons
-    var dummy,newStop int
+func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan ElevButtons){
+    var elevInfo ElevButtons
+    var dummy,newStop,numPlannedStops int
     var doorTime time.Time
-    newStop=0
     for {
         dummy=0
         select{
         case elevInfo=<-elevButtons:
         case <-time.After(time.Millisecond*5):
+            numPlannedStops=0
+            for _,val:= range(elevInfo.Planned_stops){
+            	if val{
+            		numPlannedStops++
+            	}
+            }
             
         	if elevInfo.Door_open{
             newStop=0
-        		if doorTime.Before(time.Now()){
+        		if doorTime.Before(time.Now()) || elev_get_floor_sensor_signal()==-1{
         			elevInfo.Door_open=false
         	//		elevInfo.Planned_stops[j]=false
         		}
         	}
         
             j:=elev_get_floor_sensor_signal()
-            if elevInfo.Dir && (j!=-1 && j!=3) {
+            if elevInfo.Dir && (j!=-1 && j!=N_FLOORS-1) {
             	if elevInfo.U_buttons[j]{
             		dummy=1
             	}
@@ -72,8 +74,8 @@ func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan gen
             		dummy=1
             	}
             }
+            
             if j!=-1 && elevInfo.Planned_stops[j] && dummy==1{
-                fmt.Println("STOP")
                 newStop=1
                 setElevDir<-CALL_COMMAND
                 
@@ -82,19 +84,20 @@ func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan gen
                 
                 elevInfo.C_buttons[j]=false
                 elevInfo.Planned_stops[j]=false
-                if (elevInfo.Dir && j!=3) || j==0{
+                if (elevInfo.Dir && j!=N_FLOORS-1) || j==0{
                     elevInfo.U_buttons[j]=false
-                } else if  (!(elevInfo.Dir) && j!=0) || j==3{
+                } else if  (!(elevInfo.Dir) && j!=0) || j==N_FLOORS-1{
                     elevInfo.D_buttons[j-1]=false
                 }
                 
                 
             dummy=0
+            } else if (j==-1 && elevInfo.Planned_stops[elevInfo.Current_floor]) && numPlannedStops==1{
+            	setElevDir<-CALL_UP
             } else if elevInfo.Dir && !elevInfo.Door_open{
-                for i:=elevInfo.Current_floor+1 ; i<4 ; i++{
+            	for i:=elevInfo.Current_floor+1 ; i<4 ; i++{
                     if elevInfo.Planned_stops[i]{
                         setElevDir<-CALL_UP
-                        
                         dummy=1
                     }
                 }
@@ -112,6 +115,8 @@ func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan gen
                     elevInfo.Dir=true
                 }
             }
+            
+            
             elevButtons<-elevInfo
             if newStop==1{
                 msgButtons<-elevInfo
@@ -122,8 +127,8 @@ func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan gen
 }
 
 
-func Check_buttons(buttons chan gen.ElevButtons,msgbuttons chan gen.ElevButtons) bool{
-	var elbut gen.ElevButtons
+func Check_buttons(buttons chan ElevButtons,msgbuttons chan ElevButtons) bool{
+	var elbut ElevButtons
 	var x,i int
 	//var i int
 	for{
@@ -149,11 +154,11 @@ func Check_buttons(buttons chan gen.ElevButtons,msgbuttons chan gen.ElevButtons)
 				elbut.C_buttons[i]=true
 			}
 		}
-		if elev_get_button_signal(CALL_COMMAND,3){
-		   if elbut.C_buttons[3]==false{
+		if elev_get_button_signal(CALL_COMMAND,N_FLOORS-1){
+		   if elbut.C_buttons[N_FLOORS-1]==false{
 			      x=1
 			   }
-			elbut.C_buttons[3]=true
+			elbut.C_buttons[N_FLOORS-1]=true
 		}
 
 		if elev_get_stop_signal(){
@@ -187,8 +192,8 @@ func MakeInfoStr(sendMsgTo chan string,msgbuttons chan ElevButtons){
 	}
 }
 */
-func Set_lights(buttons chan gen.ElevButtons){
-	var button gen.ElevButtons
+func Set_lights(buttons chan ElevButtons){
+	var button ElevButtons
 	for{
 		button=<-buttons
     	for i:=0; i<N_FLOORS-1; i++{
@@ -196,7 +201,7 @@ func Set_lights(buttons chan gen.ElevButtons){
 			elev_set_button_lamp(CALL_UP,i,button.U_buttons[i])
 			elev_set_button_lamp(CALL_DOWN,i+1, button.D_buttons[i])
 		}
-		elev_set_button_lamp(CALL_COMMAND,3,button.C_buttons[3])
+		elev_set_button_lamp(CALL_COMMAND,N_FLOORS-1,button.C_buttons[N_FLOORS-1])
 		elev_set_stop_lamp(button.Stop_button)
 		elev_set_door_open_lamp(button.Door_open)
 		elev_set_floor_indicator(button.Current_floor)
@@ -222,13 +227,13 @@ func Elev_init() bool{
     return true
 }
 
-func Init_buttons(buttons *gen.ElevButtons){
+func Init_buttons(buttons *ElevButtons){
     for i:=0;i<N_FLOORS-1;i++{
         buttons.U_buttons[i]=false
         buttons.D_buttons[i]=false
         buttons.C_buttons[i]=false
     }
-    buttons.C_buttons[3]=false
+    buttons.C_buttons[N_FLOORS-1]=false
     buttons.Stop_button=false
     buttons.Door_open=false
     buttons.Obstruction=false

@@ -26,9 +26,41 @@ func makeMessage(typ string, IpAdrFrom string,info string) Message{
 }
 
 func elevButtonToStr(button gen.ElevButtons) string{
-	return "ub:"+strconv.FormatBool(button.U_buttons[0])+"."+strconv.FormatBool(button.U_buttons[1])+"."+strconv.FormatBool(button.U_buttons[2])+";db:"+strconv.FormatBool(button.D_buttons[0])+"."+strconv.FormatBool(button.D_buttons[1])+"."+strconv.FormatBool(button.D_buttons[2])+";cb:"+strconv.FormatBool(button.C_buttons[0])+"."+strconv.FormatBool(button.C_buttons[1])+"."+strconv.FormatBool(button.C_buttons[2])+"."+strconv.FormatBool(button.C_buttons[3])+";sb:"+strconv.FormatBool(button.Stop_button)+";cf:"+strconv.Itoa(button.Current_floor)+";obs:"+strconv.FormatBool(button.Obstruction)+";do:"+strconv.FormatBool(button.Door_open)+";ps:"+strconv.FormatBool(button.Planned_stops[0])+"."+strconv.FormatBool(button.Planned_stops[1])+"."+strconv.FormatBool(button.Planned_stops[2])+"."+strconv.FormatBool(button.Planned_stops[3])+";dir:"+strconv.FormatBool(button.Dir)+";dummy:  "
+	str:="ub:"
+	for i:=0; i<gen.N_FLOORS-1; i++{
+		str=str+strconv.FormatBool(button.U_buttons[i])
+		if i<gen.N_FLOORS-2{
+			str=str+"."
+		}
+	}
+	str=str+";db:"
+	for i:=0; i<gen.N_FLOORS-1; i++{
+		str=str+strconv.FormatBool(button.D_buttons[i])
+		if i<gen.N_FLOORS-2{
+			str=str+"."
+		}
+	}
+	str=str+";cb:"
+	for i:=0; i<gen.N_FLOORS; i++{
+		str=str+strconv.FormatBool(button.C_buttons[i])
+		if i<gen.N_FLOORS-1{
+			str=str+"."
+		}
+	}
+	str=str+";sb:"+strconv.FormatBool(button.Stop_button)
+	str=str+";cf:"+strconv.Itoa(button.Current_floor)
+	str=str+";obs:"+strconv.FormatBool(button.Obstruction)
+	str=str+";do:"+strconv.FormatBool(button.Door_open)
+	str=str+";ps:"
+	for i:=0; i<gen.N_FLOORS; i++{
+		str=str+strconv.FormatBool(button.Planned_stops[i])
+		if i<gen.N_FLOORS-1{
+			str=str+"."
+		}
+	}
+	str=str+";dir:"+strconv.FormatBool(button.Dir)+";dummy: "
+	return str
 }
-
 
 func stringToButton(str string) gen.ElevButtons{
    var strArr,strArr2 []string

@@ -7,6 +7,8 @@ import(
 	// "fmt"
 )
 
+const N_BUTTONS int=3
+const N_FLOORS int=4
 
 type ElevButtons struct{
     U_buttons[3] bool
