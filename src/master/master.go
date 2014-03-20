@@ -1,7 +1,7 @@
 package master
 
 import(
-   // "fmt"
+    "fmt"
     gen "./../genDecl"
  //   "net"
 //    "strings"
@@ -76,6 +76,8 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
                 		elevInfoMap[lowestCostIP]=dummyElevInfo
                 	}
                 }
+                fmt.Println("Kjører Master nå")
+                fmt.Println(elevInfoMap)
                 elevInfoChan<-elevInfoMap
          }
     }
