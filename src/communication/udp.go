@@ -3,7 +3,6 @@ package communication
 import (
         "net"
         "fmt"
-     //   "time"
 )
 func getUDPcon(ipAdr string, port string) *net.UDPConn{
         serverAddr, err := net.ResolveUDPAddr("udp",ipAdr+":"+port)

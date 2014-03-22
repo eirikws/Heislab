@@ -6,12 +6,19 @@ import(
 	."./../genDecl"
 )
 
-
 type CALL_DIRECTION int
 const (
     CALL_UP CALL_DIRECTION=iota
     CALL_DOWN
     CALL_NEUTRAL
+)
+
+type ELEVATOR_STATE int
+const (
+    DRIVE_UP ELEVATOR_STATE=iota
+    DRIVE_DOWN
+    WAIT
+    PITSTOP
 )
 
 const (
@@ -34,106 +41,137 @@ var button_channel_matrix =[N_FLOORS][N_BUTTONS]int{
     {FLOOR_UP4, FLOOR_DOWN4, FLOOR_COMMAND4},
 }
 
+func Elevator(sendMsgToMaster,getMsg chan ElevInfo){
+	direction :=make(chan CALL_DIRECTION)
+	elevInfoChan:=make(chan ElevInfo)
+	var elevInfo ElevInfo
 
-func Run_elevator(setElevDir chan CALL_DIRECTION,elevButtons,msgButtons chan ElevButtons){
-    var elevInfo ElevButtons
-    var newStop,numPlannedStops int
+	elev_init()
+    go elev_set_speed(direction)
+    go set_lights(elevInfoChan)
+    go check_buttons(elevInfoChan,sendMsgToMaster)
+    go run_elevator(direction,elevInfoChan,sendMsgToMaster)
+    
+    elevator_init(direction)
+    init_buttons(&elevInfo)
+    elevInfoChan<-elevInfo
+    for{
+    	elevInfo=<-getMsg
+    	elevInfoChan<-elevInfo
+    }
+}
+
+func run_elevator(setElevDir chan CALL_DIRECTION,elevButtonChan,msgToMaster chan ElevInfo){
+    var elevInfo ElevInfo
     var doorTime time.Time
-    var canStop,setDir bool
+    var setDir bool
+    var State ELEVATOR_STATE
+    var j int
+    State=WAIT
     for {
         select{
-        case elevInfo=<-elevButtons:
-        case <-time.After(time.Millisecond*10):
-            numPlannedStops=0
-            for _,val:= range(elevInfo.Planned_stops){
-            	if val{
-            		numPlannedStops++
-            	}
-            }
-        	if elevInfo.Door_open{
-            	newStop=0
-        		if doorTime.Before(time.Now()) || elev_get_floor_sensor_signal()==-1{
-        			elevInfo.Door_open=false
-        	//		elevInfo.Planned_stops[j]=false
-        		}
-        	}
-        	canStop=false
+        case elevInfo=<-elevButtonChan:
+        case <-time.After(time.Millisecond*5):
+        	j=elev_get_floor_sensor_signal()
         	setDir=false
-            j:=elev_get_floor_sensor_signal()
-            if elevInfo.Dir>-1 && (j!=-1 && j!=N_FLOORS-1) {
-            	if elevInfo.U_buttons[j]{
-            		fmt.Println("U")
-            		canStop=true
-            	}
-            }
-            if elevInfo.Dir<1 && (j!=-1 && j!=0) {
-            	
-            	if elevInfo.D_buttons[j-1]{
-            		fmt.Println("D")
-            		canStop=true
-            	}
-            }
-            if j!=-1{
-            	if elevInfo.C_buttons[j]{
-            		fmt.Println("C")
-            		canStop=true
-            	}
-            }
-            if (j!=-1 && elevInfo.Planned_stops[j]) && (canStop){
-            	fmt.Println("STOP")
-                newStop=1
-                setElevDir<-CALL_NEUTRAL
-                elevInfo.Door_open=true
-                doorTime=time.Now().Add(3*time.Second)
-                elevInfo.C_buttons[j]=false
-                elevInfo.Planned_stops[j]=false
-                if (elevInfo.Dir>-1 && j!=N_FLOORS-1) || j==0{
-                    elevInfo.U_buttons[j]=false
-                }
-                if  (elevInfo.Dir<1 && j!=0) || j==N_FLOORS-1{
-                    elevInfo.D_buttons[j-1]=false
-                }
-            } else if (j==-1 && elevInfo.Planned_stops[elevInfo.Current_floor]) && numPlannedStops==1{
-            	setElevDir<-CALL_UP
-            } else if elevInfo.Dir==1 && !elevInfo.Door_open {
-            	for i:=elevInfo.Current_floor+1 ; i<N_FLOORS ; i++{
-                    if elevInfo.Planned_stops[i]{
-                        setElevDir<-CALL_UP
-                        elevInfo.Dir=1
-                        setDir=true
-                    }
-                }
-                if !setDir{
-                    elevInfo.Dir=0
-                } 
-            } else if elevInfo.Dir==-1 && !elevInfo.Door_open {
-                for i:=elevInfo.Current_floor-1 ;  i>-1 ; i--{
-                    if elevInfo.Planned_stops[i]{
-                        setElevDir<-CALL_DOWN
-                        elevInfo.Dir=-1
-                        setDir=true
-                    }
-                }
-                if !setDir{
-                    elevInfo.Dir=0
-                }
-            }else if elevInfo.Dir==0{
-            	if isAbove(elevInfo.Current_floor,elevInfo.Planned_stops)==1{
-            		elevInfo.Dir=1
-            		fmt.Println("switch to up")
-            	} else if isBelove(elevInfo.Current_floor,elevInfo.Planned_stops)==1{
-            		elevInfo.Dir=-1
-            		fmt.Println("switch to down")
-            	}
-            }
-            elevButtons<-elevInfo
-            if newStop==1{
-                msgButtons<-elevInfo
-            }
+        	switch State{
+				case DRIVE_UP:
+					if (j!=-1 && j!=N_FLOORS-1){
+						if (elevInfo.Planned_stops[j]) && (elevInfo.U_buttons[j] || elevInfo.C_buttons[j]){
+							State=PITSTOP
+							break
+						}
+					}
+					//checks if there are stops above
+					for i:=elevInfo.Current_floor+1 ; i<N_FLOORS ; i++{
+						if elevInfo.Planned_stops[i]{
+							setElevDir<-CALL_UP
+							elevInfo.Dir=1
+							setDir=true
+						}
+					}
+					if !setDir{
+						elevInfo.Dir=0
+						State=WAIT
+						break
+					} 
+				case DRIVE_DOWN:
+					if (j!=-1 && j!=0){
+						if (elevInfo.Planned_stops[j]) && (elevInfo.D_buttons[j-1] || elevInfo.C_buttons[j]){
+							State=PITSTOP
+							break
+						}
+					}
+					//checks if there are stops belove
+					for i:=elevInfo.Current_floor-1 ;  i>-1 ; i--{
+						 if elevInfo.Planned_stops[i]{
+							setElevDir<-CALL_DOWN
+							elevInfo.Dir=-1
+							setDir=true
+						}
+					}
+					if !setDir{
+						elevInfo.Dir=0
+						State=WAIT
+						break
+					}
+				case WAIT:
+					if j==-1{
+						setElevDir<-CALL_UP
+						elevInfo.Dir=1
+						break
+					} else {setElevDir<-CALL_NEUTRAL}
+					if elevInfo.Planned_stops[j]{
+						State=PITSTOP
+						break
+					} else if isAbove(elevInfo.Current_floor,elevInfo.Planned_stops)==1{
+						elevInfo.Dir=1
+						State=DRIVE_UP
+						break
+					} else if isBelove(elevInfo.Current_floor,elevInfo.Planned_stops)==1{
+						elevInfo.Dir=-1
+						State=DRIVE_DOWN
+						break
+					}
+				case PITSTOP:
+					if elevInfo.Door_open{
+						if doorTime.Before(time.Now()) || elev_get_floor_sensor_signal()==-1{
+							elevInfo.Door_open=false
+							msgToMaster<-elevInfo
+							if elevInfo.Dir==1{
+								State=DRIVE_UP
+								break
+							} else if elevInfo.Dir==-1{
+								State=DRIVE_DOWN
+								break
+							} else if elevInfo.Dir==0{
+								State=WAIT
+								break
+							}
+						}
+					} else{
+						setElevDir<-CALL_NEUTRAL
+						elevInfo.Door_open=true
+						doorTime=time.Now().Add(3*time.Second)
+						elevInfo.C_buttons[j]=false
+					   	elevInfo.Planned_stops[j]=false
+						if (elevInfo.Dir>-1 && j!=N_FLOORS-1) || j==0{
+							 elevInfo.U_buttons[j]=false
+						}
+						if  (elevInfo.Dir<1 && j!=0) || j==N_FLOORS-1{
+							elevInfo.D_buttons[j-1]=false
+						}
+						msgToMaster<-elevInfo
+					}    	
+				}
+				elevButtonChan<-elevInfo
+			
+			
         }
     }
 }
 
+//checks if there is a planned stop above the elevator
 func isAbove(myFloor int,Planned_stops [N_FLOORS]bool)int{
 	for i:=myFloor+1; i<N_FLOORS;i++{
 		if Planned_stops[i]{
@@ -143,6 +181,7 @@ func isAbove(myFloor int,Planned_stops [N_FLOORS]bool)int{
 	return 0
 }
 
+//checks if there is a planned stop belove the elevator
 func isBelove(myFloor int,Planned_stops [N_FLOORS]bool)int{
 	for i:=myFloor-1; i>-1;i--{
 		if Planned_stops[i]{
@@ -152,91 +191,83 @@ func isBelove(myFloor int,Planned_stops [N_FLOORS]bool)int{
 	return 0
 }
 
-
-
-func Check_buttons(buttons chan ElevButtons,msgbuttons chan ElevButtons) bool{
-	var elbut ElevButtons
+//updates the elevInfo struct when a button is pushed. Sends a message to coms when a new button is pushed
+//or over 5 seconds has passed since it sent one
+func check_buttons(elevInfoChan chan ElevInfo,sendToMaster chan ElevInfo) bool{
+	var elevInfo ElevInfo
 	var x,i int
-	//var i int
+	var sendTime time.Time
+	sendTime=time.Now().Add(5*time.Second)
 	for{
 		x=0
-		elbut=<-buttons
+		elevInfo=<-elevInfoChan
 		for i:=0; i<N_FLOORS-1; i++ {
 			if elev_get_button_signal(CALL_UP, i){
-			   if elbut.U_buttons[i]==false{
+			   if elevInfo.U_buttons[i]==false{
 			      x=1
 			   }
-				elbut.U_buttons[i]=true
+				elevInfo.U_buttons[i]=true
 			}
 			if elev_get_button_signal(CALL_DOWN, i+1){
-			   if elbut.D_buttons[i]==false{
+			   if elevInfo.D_buttons[i]==false{
 			      x=1
 			   }
-				elbut.D_buttons[i]=true
+				elevInfo.D_buttons[i]=true
 			}
 			if elev_get_button_signal(CALL_NEUTRAL, i){
-			   if elbut.C_buttons[i]==false{
+			   if elevInfo.C_buttons[i]==false{
 			      x=1
 			   }
-				elbut.C_buttons[i]=true
+				elevInfo.C_buttons[i]=true
 			}
 		}
 		if elev_get_button_signal(CALL_NEUTRAL,N_FLOORS-1){
-		   if elbut.C_buttons[N_FLOORS-1]==false{
+		   if elevInfo.C_buttons[N_FLOORS-1]==false{
 			      x=1
 			   }
-			elbut.C_buttons[N_FLOORS-1]=true
+			elevInfo.C_buttons[N_FLOORS-1]=true
 		}
 
 		if elev_get_stop_signal(){
-		   if elbut.Stop_button==false{
+		   if elevInfo.Stop_button==false{
 			      x=1
 			   }
-			elbut.Stop_button=true
+			elevInfo.Stop_button=true
 		}
 		i=elev_get_floor_sensor_signal()
 		if i!=-1{
-		    if elbut.Current_floor!=i{
+		    if elevInfo.Current_floor!=i{
 		       x=1
 		    }
-		    elbut.Current_floor=i
+		    elevInfo.Current_floor=i
 		}
-		if x==1{
-		   msgbuttons<-elbut
+		if x==1 || sendTime.Before(time.Now()){
+		   sendToMaster<-elevInfo
+		   sendTime=time.Now().Add(5*time.Second)
 		}
-		buttons<-elbut
+		elevInfoChan<-elevInfo
+		time.Sleep(50)
 	}
 }
 
-/*
-func MakeInfoStr(sendMsgTo chan string,msgbuttons chan ElevButtons){
-	var button ElevButtons
-	var str string
+func set_lights(elevInfoChan chan ElevInfo){
+	var elevInfo ElevInfo
 	for{
-		button=<-msgbuttons
-		str=ElevButtonToStr(button)
-		sendMsgTo<-str
-	}
-}
-*/
-func Set_lights(buttons chan ElevButtons){
-	var button ElevButtons
-	for{
-		button=<-buttons
+		elevInfo=<-elevInfoChan
     	for i:=0; i<N_FLOORS-1; i++{
-			elev_set_button_lamp(CALL_NEUTRAL,i,button.C_buttons[i])
-			elev_set_button_lamp(CALL_UP,i,button.U_buttons[i])
-			elev_set_button_lamp(CALL_DOWN,i+1, button.D_buttons[i])
+			elev_set_button_lamp(CALL_NEUTRAL,i,elevInfo.C_buttons[i])
+			elev_set_button_lamp(CALL_UP,i,elevInfo.U_buttons[i])
+			elev_set_button_lamp(CALL_DOWN,i+1, elevInfo.D_buttons[i])
 		}
-		elev_set_button_lamp(CALL_NEUTRAL,N_FLOORS-1,button.C_buttons[N_FLOORS-1])
-		elev_set_stop_lamp(button.Stop_button)
-		elev_set_door_open_lamp(button.Door_open)
-		elev_set_floor_indicator(button.Current_floor)
-		buttons<-button
+		elev_set_button_lamp(CALL_NEUTRAL,N_FLOORS-1,elevInfo.C_buttons[N_FLOORS-1])
+		elev_set_stop_lamp(elevInfo.Stop_button)
+		elev_set_door_open_lamp(elevInfo.Door_open)
+		elev_set_floor_indicator(elevInfo.Current_floor)
+		elevInfoChan<-elevInfo
 	}
 }
 
-func Elev_init() bool{
+func elev_init() bool{
     if io_init()==0{
         return false
     }
@@ -254,7 +285,7 @@ func Elev_init() bool{
     return true
 }
 
-func Init_buttons(buttons *ElevButtons){
+func init_buttons(buttons *ElevInfo){
     for i:=0;i<N_FLOORS-1;i++{
         buttons.U_buttons[i]=false
         buttons.D_buttons[i]=false
@@ -268,7 +299,7 @@ func Init_buttons(buttons *ElevButtons){
 	buttons.Dir=0
 }
 
-func Elevator_init(drive chan CALL_DIRECTION){
+func elevator_init(drive chan CALL_DIRECTION){
     drive<-CALL_UP
 	
     for elev_get_floor_sensor_signal()==-1{
@@ -277,7 +308,7 @@ func Elevator_init(drive chan CALL_DIRECTION){
     drive<-CALL_NEUTRAL
 }
 
-func Elev_set_speed(myDir chan CALL_DIRECTION){
+func elev_set_speed(myDir chan CALL_DIRECTION){
     lastDir:=CALL_NEUTRAL
     nowDir:=CALL_NEUTRAL
     for{

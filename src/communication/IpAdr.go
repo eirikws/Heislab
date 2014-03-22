@@ -4,14 +4,13 @@ import(
     "fmt"
     "strings"
     "strconv"
-    "sort"
     "time"
 )
 
 func getMyIP() string{
     allIPs,err:=net.InterfaceAddrs()
     if err!=nil{
-        fmt.Println("IP receiving errors!!!!!!!!\n")
+        fmt.Println("IP receiving errors!\n")
         return ""
     }
     return strings.Split(allIPs[1].String(),"/")[0]
@@ -22,60 +21,36 @@ func getBIP(MyIP string) string{
     return IP[0]+"."+IP[1]+"."+IP[2]+".255"
 }
 
-func IPsort(list []IPandTimeStamp) []IPandTimeStamp{ 
-    ipbase:=strings.Split(list[0].IPadr,".")[0:3]
-    var intlist []int
-    var newlist []IPandTimeStamp
-    var iptime IPandTimeStamp
-    for i,val:=range(list){
-        i,_=strconv.Atoi(strings.Split(val.IPadr,".")[3])
-        intlist=append(intlist,i)
-    }
-    sort.Ints(intlist)
-    for _,val:= range(intlist){
-        iptime=IPandTimeStamp{ipbase[0]+"."+ipbase[1]+"."+ipbase[2]+"."+strconv.Itoa(val),time.Now()}
-        newlist=append(newlist,iptime)
-    }
-    i:=0
-    for i<len(list){
-        for j:=0; j<len(list); j++{
-            if newlist[i].IPadr==list[j].IPadr{
-                newlist[i].Timestamp=list[j].Timestamp
-                i++
-                break
-            }
-        }
-    }
-    return newlist
-}
-    
-func timeStampCheck(list chan []IPandTimeStamp,deletedIP chan string,MyIP string){
-    var IPlist []IPandTimeStamp
-    var newlist []IPandTimeStamp
-    var didWeDelete int
-    for{
-        newlist=nil
-        didWeDelete=0
-        IPlist=<-list
-        for _,val:= range(IPlist){
-            if val.Timestamp.Before(time.Now()) && val.IPadr!=MyIP{
-                didWeDelete=1
-                deletedIP<-val.IPadr
-                for _,bval:=range(IPlist){
-                    if val.IPadr!=bval.IPadr{
-                        newlist=append(newlist,bval)
-                    } 
-                }
-                list<-newlist
-                break
-            }
-        }
-        if didWeDelete==0{
 
-           list<-IPlist
+func getSmallestIP(list map[string]time.Time)string{
+	var smallestIP = 10000
+	var ip int
+	var ipbase []string
+	for key,_:=range(list){
+		ip,_=strconv.Atoi(strings.Split(key,".")[3])
+		if ip<smallestIP{
+			smallestIP=ip
+		}
+		ipbase=strings.Split(key,".")[0:3]
+	}
+	return ipbase[0]+"."+ipbase[1]+"."+ipbase[2]+"."+strconv.Itoa(smallestIP)
+}
+
+//deletes all entries which timestamp has run out except MyIP
+func timeStampCheck(list chan map[string]time.Time,deletedIP chan string,MyIP string){
+    var IPlist map[string]time.Time
+    for{
+        IPlist=<-list
+        for key,val:= range(IPlist){
+            if val.Before(time.Now()) && key!=MyIP{
+                deletedIP<-key
+                delete(IPlist,key)
+                break
+            }
         }
-        time.Sleep(time.Millisecond*100)
+        list<-IPlist
     }
+
 }
 
 

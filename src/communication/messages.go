@@ -5,15 +5,15 @@ import (
 	"strconv"
 	gen "./../genDecl"
 )
-//import "fmt"
+
 type Message struct{
-	typ string
+	toModule string
     from string
     info string
 }
 
 func msgToByte(p Message) []byte{
-    return []byte(p.typ+"£"+p.from+"£"+p.info+"\x00")
+    return []byte(p.toModule+"£"+p.from+"£"+p.info+"\x00")
 }
 
 func byteToMsg(p []byte) Message{
@@ -21,11 +21,11 @@ func byteToMsg(p []byte) Message{
     return Message{msg[0],msg[1],msg[2]}
 }
 
-func makeMessage(typ string, IpAdrFrom string,info string) Message{
-    return Message{typ,IpAdrFrom,info}
+func makeMessage(toModule string, IpAdrFrom string,info string) Message{
+    return Message{toModule,IpAdrFrom,info}
 }
 
-func elevButtonToStr(button gen.ElevButtons) string{
+func elevButtonToStr(button gen.ElevInfo) string{
 	str:="ub:"
 	for i:=0; i<gen.N_FLOORS-1; i++{
 		str=str+strconv.FormatBool(button.U_buttons[i])
@@ -62,33 +62,33 @@ func elevButtonToStr(button gen.ElevButtons) string{
 	return str
 }
 
-func stringToButton(str string) gen.ElevButtons{
+func stringToButton(str string) gen.ElevInfo{
    var strArr,strArr2 []string
-   var typ string
-   var myButton gen.ElevButtons
+   var toModule string
+   var myButton gen.ElevInfo
    strArr=strings.Split(str,";")
    for _,ival:=range(strArr){
       strArr2=strings.Split(ival,":")
-      typ=strArr2[0]
+      toModule=strArr2[0]
       
       for j,jval:=range(strings.Split(strArr2[1],".")){
-         if typ=="ub"{
+         if toModule=="ub"{
             myButton.U_buttons[j]=(jval=="true")
-         } else if typ=="db"{
+         } else if toModule=="db"{
             myButton.D_buttons[j]=(jval=="true")
-         } else if typ=="cb"{
+         } else if toModule=="cb"{
             myButton.C_buttons[j]=(jval=="true")
-         } else if typ=="sb"{
+         } else if toModule=="sb"{
             myButton.Stop_button=(jval=="true")
-         } else if typ=="cf"{
+         } else if toModule=="cf"{
             myButton.Current_floor,_=strconv.Atoi(jval)
-         } else if typ=="obs"{
+         } else if toModule=="obs"{
             myButton.Obstruction=(jval=="true")
-         } else if typ=="do"{
+         } else if toModule=="do"{
             myButton.Door_open=(jval=="true")
-         } else if typ=="ps"{
+         } else if toModule=="ps"{
             myButton.Planned_stops[j]=(jval=="true")
-         } else if typ=="dir"{
+         } else if toModule=="dir"{
             myButton.Dir,_=strconv.Atoi(jval)
          }
       }
