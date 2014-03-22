@@ -2,10 +2,10 @@ package main
 
 
 import(
-    //"fmt"
+    "fmt"
     //"net"
     ."runtime"
-    //"time"
+    "time"
     com "./../communication"
     elev "./../elevator"
     gen "./../genDecl"
@@ -24,7 +24,7 @@ func main(){
     GOMAXPROCS(NumCPU())
 	
     elev.Init_buttons(&button)
-
+	var sendTime time.Time
     elev.Elev_init()
     go elev.Elev_set_speed(direction)
     elev.Elevator_init(direction)
@@ -32,15 +32,13 @@ func main(){
     go elev.Check_buttons(buttons,sendMsgToMaster)
     go elev.Run_elevator(direction,buttons,sendMsgToMaster)
     buttons<-button
+    sendTime=time.Now().Add(5*time.Second)
     for{
-        
-    	//msg=<-getMsg
-    	//button=<-buttons
-    	//buttons=<-getMsg
-    	//time.Sleep(time.Second*0)
-    	
     	button=<-getMsg
+    	fmt.Println(button)
     	buttons<-button
+    	fmt.Println("After write")
+    	
     	
     }
 }

@@ -46,16 +46,14 @@ func Communication(sendChanMaster chan gen.ElevButtons, getChan chan gen.ElevBut
             AliveList=IPsort(AliveList)
             master<-AliveList[0].IPadr
             if LastMaster!=AliveList[0].IPadr{
-                fmt.Println("yeppppp")
             	sendChanMaster<-elevInfo[MyIP]
             }
             LastMaster=AliveList[0].IPadr
             ch<-AliveList
         case IPadr=<-deletedIP:
         	delete(elevInfo,IPadr)
-        	fmt.Println("got deleted IP")
         case msg=<-receiveChan:
-       		//fmt.Println("got msg", msg.typ,msg)
+       		fmt.Println("got msg", msg.typ)
         	switch {
         	case msg.typ=="C":
         		getChan<-stringToButton(msg.info)
@@ -69,6 +67,7 @@ func Communication(sendChanMaster chan gen.ElevButtons, getChan chan gen.ElevBut
            		for key,val:=range(elevInfo){
            		    go sendMsgToThisGuy(key,val,MyIP,receiveChan)
            		}
+           	
            	}
         }
     }
@@ -180,18 +179,12 @@ func imAliveListener(MyIP, BIP string, ch chan []IPandTimeStamp){
 func sendMsgToMaster(master chan string,sendChan chan gen.ElevButtons, MyIP string,receiveChan chan Message){
     var mst string
     var info gen.ElevButtons
-	var sendTime time.Time
+//	var sendTime time.Time
     for{
         select{
         case mst=<-master:
             master<-mst
-			if sendTime.Before(time.Now()){
-				fmt.Println("muhaha")
-				sendTime=time.Now().Add(5*time.Second)
-				go sendMsg(mst,MyIP,receiveChan,info)
-    		}
         case info=<-sendChan:
-        	sendTime=time.Now().Add(3*time.Second)
         	go sendMsg(mst,MyIP,receiveChan,info)
         }
     }

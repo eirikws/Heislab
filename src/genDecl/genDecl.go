@@ -19,9 +19,8 @@ type ElevButtons struct{
     Obstruction bool
     Door_open bool
     Planned_stops[4] bool
-    Dir bool
+    Dir int
 }
-
 
 
 

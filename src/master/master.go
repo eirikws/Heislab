@@ -1,7 +1,7 @@
 package master
 
 import(
-    "fmt"
+    //"fmt"
     gen "./../genDecl"
  //   "net"
 //    "strings"
@@ -19,6 +19,7 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
         select{
             case mst=<-master:
             case elevInfoMap=<-elevInfoChan:
+            	
                 if mst!=MyIP{
                 	elevInfoChan<-elevInfoMap
                     continue
@@ -46,7 +47,7 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
 					dummycost=1000000
 					if order{
 						for key,val:=range(elevInfoMap){
-                			costMap[key]=costFunc(val,true,floor)
+                			costMap[key]=costFunc(val,1,floor)
                 		}
                 		for costkey,cost:=range(costMap){
                 			if cost<dummycost{
@@ -63,7 +64,7 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
 					dummycost=1000000
 					if order{
 						for key,val:=range(elevInfoMap){
-                			costMap[key]=costFunc(val,false,floor+1)
+                			costMap[key]=costFunc(val,-1,floor+1)
                 		}
                 		for costkey,cost:=range(costMap){
                 			if cost<dummycost{
@@ -76,56 +77,72 @@ func Master(master chan string,elevInfoChan chan map[string]gen.ElevButtons,orde
                 		elevInfoMap[lowestCostIP]=dummyElevInfo
                 	}
                 }
-                fmt.Println("Kjører Master nå")
-                fmt.Println(elevInfoMap)
                 elevInfoChan<-elevInfoMap
          }
     }
 }
 
 
-func costFunc(elevator gen.ElevButtons,dir bool,floor int)int{
+func costFunc(elevator gen.ElevButtons,dir int,floor int)int{
 	searchFloor:=elevator.Current_floor
 	searchDir:=elevator.Dir
 	cost:=0
-	dummy:=0
-	var i int
+	var dummy int
 	for _,val:=range(elevator.Planned_stops){
 		if val{
 			dummy=1
 		}
-		if dummy==0 && (searchFloor==floor && searchDir==dir) {
+		if dummy==0 && (searchFloor==floor && (searchDir==dir || searchDir==0)) {
 			return 0
 		}
 	}
-	for !(searchFloor==floor && searchDir==dir){
-		cost++
-		if searchDir{
+	if searchDir==0{
+		if floor<searchFloor{
+			searchDir=-1
+		} else {searchDir=1}
+	}
+	for !(searchFloor==floor && (searchDir==dir || searchDir==0)){
+		if searchDir==1{
+			if isAbove(searchFloor,floor,elevator.Planned_stops)==0{
+				searchDir=-1
+				continue
+			}
+		} else {
+			if isBelove(searchFloor,floor,elevator.Planned_stops)==0{
+				searchDir=1
+				continue
+			}
+		}
+		if searchDir==1 {
 			searchFloor++
-		} else{
+		} else if searchDir==-1{
 			searchFloor--
 		}
-		i=searchFloor
-		dummy=0
-		for i<gen.N_FLOORS && i>-1{
-			if elevator.Planned_stops[i]{
-				dummy=1
-			}
-			if i==floor{
-				dummy=1
-			}	
-			if searchDir{
-				i++
-			} else {
-				i--
-			}
-		}
-		if dummy==0 {
-			searchDir= !searchDir
-		}
+		cost++
 	}
 	return cost
 }
+
+func isAbove(myFloor,checkFloor int,Planned_stops [gen.N_FLOORS]bool)int{
+	for i:=myFloor+1; i<gen.N_FLOORS;i++{
+		if Planned_stops[i] || checkFloor==i{
+			return 1
+		}
+	}
+	return 0
+}
+
+func isBelove(myFloor,checkFloor int,Planned_stops [gen.N_FLOORS]bool)int{
+	for i:=myFloor-1; i>-1;i--{
+		if Planned_stops[i] || checkFloor==i{
+			return 1
+		}
+	}
+	return 0
+}
+
+
+
 /*
 func getMyIP() string{
     allIPs,err:=net.InterfaceAddrs()

@@ -58,7 +58,7 @@ func elevButtonToStr(button gen.ElevButtons) string{
 			str=str+"."
 		}
 	}
-	str=str+";dir:"+strconv.FormatBool(button.Dir)+";dummy: "
+	str=str+";dir:"+strconv.Itoa(button.Dir)+";dummy: "
 	return str
 }
 
@@ -89,7 +89,7 @@ func stringToButton(str string) gen.ElevButtons{
          } else if typ=="ps"{
             myButton.Planned_stops[j]=(jval=="true")
          } else if typ=="dir"{
-            myButton.Dir=(jval=="true")
+            myButton.Dir,_=strconv.Atoi(jval)
          }
       }
    }
